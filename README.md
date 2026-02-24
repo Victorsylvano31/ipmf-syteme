@@ -2,16 +2,16 @@
 
 IPMF Systeme est une application de gestion complète comprenant un backend robuste en Django et un frontend moderne en React.
 
-## 🚀 Fonctionnalités
+## Fonctionnalités
 
 - **Dashboard** : Visualisation des données et statistiques.
 - **Gestion des Utilisateurs** : Système d'authentification et de rôles.
-- **Gestion Financière** : Suivi des revenus et dépenses.
+- **Gestion Financière** : Suivi des revenus et d'un suivi des dépenses.
 - **Gestion des Tâches** : Attribution et suivi de l'état des tâches.
 - **Audit et Logs** : Historique des actions effectuées sur le système.
 - **Notifications** : Système d'alertes en temps réel.
 
-## 🛠️ Stack Technique
+## Stack Technique
 
 ### Backend
 - **Framework** : Django 5.x / Django REST Framework
@@ -26,7 +26,7 @@ IPMF Systeme est une application de gestion complète comprenant un backend robu
 - **Graphiques** : Recharts
 - **Calendrier** : React Big Calendar
 
-## 📦 Installation
+## Installation
 
 ### 1. Prérequis
 - Python 3.10+
@@ -67,10 +67,10 @@ npm install
 npm start
 ```
 
-## 📜 Scripts Utiles (Backend)
+## Scripts Utiles (Backend)
 - `python manage.py create_users` : Initialise les utilisateurs par défaut.
 - `python manage.py create_tasks` : Génère des tâches de test.
 - `python manage.py create_db` : Script personnalisé d'initialisation de la base de données.
 
-## 📄 Licence
+## Licence
 Ce projet est propriétaire.
