@@ -1,0 +1,40 @@
+:root {
+    /* Main Theme Aliases */
+    --bg-primary: var(--color-bg-card);
+    --bg-secondary: var(--color-bg-main);
+    --bg-tertiary: var(--color-gray-100);
+
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+
+    --border-color: var(--color-border);
+    --shadow-sm: var(--shadow-sm);
+    --shadow-md: var(--shadow-base);
+    --shadow-lg: var(--shadow-lg);
+
+    --card-bg: var(--color-bg-card);
+    --card-border: var(--color-border);
+
+    --input-bg: var(--color-input-bg);
+    --input-border: var(--color-input-border);
+    --input-focus-border: var(--color-primary-400);
+
+    --primary: var(--color-primary-500);
+    --primary-hover: var(--color-primary-600);
+    --secondary: var(--color-success);
+    --danger: var(--color-danger);
+}
+
+[data-theme="dark"] {
+    --bg-tertiary: var(--color-gray-800);
+}
+
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
