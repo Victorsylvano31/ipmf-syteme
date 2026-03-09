@@ -6,6 +6,8 @@ const variants = {
     outline: 'bg-transparent text-blue-600 border border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20',
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]',
     danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm',
+    warning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm',
 };
 
 const sizes = {

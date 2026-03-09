@@ -199,7 +199,7 @@ export default function TaskDetail() {
                 {/* Main content column */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Mission Overview */}
-                    <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
+                    <Card className="border-none shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-blue-900/20">
                         <div className="h-1.5 w-full bg-blue-600"></div>
                         <CardHeader className="pb-4">
                             <div className="flex items-center gap-2 text-slate-400 font-bold text-[11px] uppercase tracking-[0.1em] mb-2">
@@ -216,7 +216,7 @@ export default function TaskDetail() {
                                     <AlignLeft size={16} className="text-blue-500" />
                                     <span>Description & Objectifs</span>
                                 </div>
-                                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-slate-600 leading-relaxed text-[15px] whitespace-pre-wrap">
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 leading-relaxed text-[15px] whitespace-pre-wrap">
                                     {task.description}
                                 </div>
                             </div>
@@ -235,14 +235,15 @@ export default function TaskDetail() {
 
                                 <div className="space-y-3">
                                     {task.sous_taches?.map((st) => (
-                                        <div key={st.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl group hover:shadow-sm transition-all">
+                                        <div key={st.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 rounded-xl group hover:shadow-sm transition-all">
                                             <input
                                                 type="checkbox"
                                                 checked={st.est_terminee}
                                                 onChange={() => handleToggleSubTask(st.id)}
-                                                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                disabled={!isAdminOrDG && (st.assigne_a !== user?.id || ['terminee', 'validee', 'annulee'].includes(task.statut))}
+                                                className={`w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 ${(!isAdminOrDG && (st.assigne_a !== user?.id || ['terminee', 'validee', 'annulee'].includes(task.statut))) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                             />
-                                            <span className={`flex-1 text-sm font-medium ${st.est_terminee ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                            <span className={`flex-1 text-sm font-medium ${st.est_terminee ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                                                 {st.titre}
                                             </span>
                                             {st.assigne_a_name && (
@@ -261,37 +262,39 @@ export default function TaskDetail() {
                                         </div>
                                     ))}
 
-                                    <div className="flex flex-col gap-2 mt-4">
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="Nouvelle étape..."
-                                                value={newSubTask}
-                                                onChange={e => setNewSubTask(e.target.value)}
-                                                onKeyPress={e => e.key === 'Enter' && handleAddSubTask()}
-                                                className="flex-1 h-10 text-sm"
-                                            />
-                                            <Button
-                                                size="sm"
-                                                icon={PlusCircle}
-                                                onClick={handleAddSubTask}
-                                                disabled={!newSubTask.trim()}
+                                    {isAdminOrDG && (
+                                        <div className="flex flex-col gap-2 mt-4">
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Nouvelle étape..."
+                                                    value={newSubTask}
+                                                    onChange={e => setNewSubTask(e.target.value)}
+                                                    onKeyPress={e => e.key === 'Enter' && handleAddSubTask()}
+                                                    className="flex-1 h-10 text-sm"
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    icon={PlusCircle}
+                                                    onClick={handleAddSubTask}
+                                                    disabled={!newSubTask.trim()}
+                                                >
+                                                    Ajouter
+                                                </Button>
+                                            </div>
+                                            <select
+                                                value={subTaskAssignee}
+                                                onChange={e => setSubTaskAssignee(e.target.value)}
+                                                className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 transition-all"
                                             >
-                                                Ajouter
-                                            </Button>
+                                                <option value="">Assigner à... (Optionnel)</option>
+                                                {task.agents_assignes?.map((agentId, idx) => (
+                                                    <option key={agentId} value={agentId} className="dark:bg-slate-800">
+                                                        {task.agents_assignes_names?.[idx]}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
-                                        <select
-                                            value={subTaskAssignee}
-                                            onChange={e => setSubTaskAssignee(e.target.value)}
-                                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                                        >
-                                            <option value="">Assigner à... (Optionnel)</option>
-                                            {task.agents_assignes?.map((agentId, idx) => (
-                                                <option key={agentId} value={agentId}>
-                                                    {task.agents_assignes_names?.[idx]}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -344,14 +347,14 @@ export default function TaskDetail() {
                                     )}
 
                                     {task.peut_valider && isAdminOrDG && (
-                                        <Card className="bg-blue-50 border-blue-100 shadow-none">
+                                        <Card className="bg-blue-50/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30 shadow-none">
                                             <CardContent className="p-5 space-y-4">
-                                                <p className="font-semibold text-blue-900 text-sm">Vérification de la conformité du travail :</p>
+                                                <p className="font-semibold text-blue-900 dark:text-blue-100 text-sm">Vérification de la conformité du travail :</p>
                                                 <textarea
                                                     placeholder="Commentaire d'approbation ou remarques..."
                                                     value={comment}
                                                     onChange={e => setComment(e.target.value)}
-                                                    className="w-full p-4 bg-white border border-blue-200 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all text-sm min-h-[80px]"
+                                                    className="w-full p-4 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-900/50 rounded-xl focus:ring-4 focus:ring-blue-100/20 outline-none transition-all text-sm min-h-[80px] text-slate-800 dark:text-slate-100"
                                                 />
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
                                                     <div className="flex-1">
@@ -418,47 +421,118 @@ export default function TaskDetail() {
                     </Card>
 
                     {/* Timeline & Activity */}
-                    <Card className="border-none shadow-lg shadow-slate-200/50">
-                        <CardHeader className="border-b border-slate-50 pb-4">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <MessageSquare size={18} className="text-blue-500" />
-                                Historique & Commentaires
+                    <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-blue-900/20">
+                        <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <CardTitle className="text-lg font-bold flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <MessageSquare size={18} className="text-blue-500" />
+                                    <span>Historique & Discussion</span>
+                                </div>
+                                <Badge variant="primary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-none font-bold">
+                                    {task.messages?.length || 0}
+                                </Badge>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-8 px-4 md:px-8">
                             {task.messages?.length > 0 ? (
-                                <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-slate-100">
-                                    {task.messages.map((msg, idx) => (
-                                        <div key={idx} className="relative pl-10 group">
-                                            <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-white border-2 border-slate-200 group-hover:border-blue-500 transition-colors z-10 flex items-center justify-center">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-blue-500 transition-colors"></div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-bold text-slate-800 text-sm">{msg.author}</span>
-                                                    <Badge variant="primary" size="sm" className="bg-slate-100 text-slate-500 text-[10px]">Action</Badge>
+                                <div className="space-y-8 relative before:absolute before:inset-y-0 before:left-3 md:before:left-5 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                                    {task.messages.map((msg, idx) => {
+                                        const isStaff = ['dg', 'admin'].includes(msg.author_role);
+                                        return (
+                                            <div key={idx} className="relative pl-10 md:pl-14 group">
+                                                {/* Timeline Node Icon (Avatar) */}
+                                                <div className="absolute left-0 md:left-2 top-0 z-10 transition-transform group-hover:scale-110 duration-300">
+                                                    <Avatar
+                                                        src={msg.author_photo}
+                                                        name={msg.author}
+                                                        size="base"
+                                                        className={isStaff ? 'ring-2 ring-blue-500 ring-offset-2' : 'ring-2 ring-slate-200 ring-offset-2'}
+                                                    />
                                                 </div>
-                                                <div className="text-sm text-slate-600 bg-slate-50/50 p-4 rounded-2xl border border-slate-50 leading-relaxed font-medium">
-                                                    {msg.text}
+
+                                                <div className="space-y-3">
+                                                    {/* Header: Name + Role + Time */}
+                                                    <div className="flex flex-col md:flex-row md:items-center gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-slate-800 text-sm tracking-tight">{msg.author}</span>
+                                                            {msg.author_role_display && (
+                                                                <Badge
+                                                                    size="sm"
+                                                                    className={`text-[9px] font-black tracking-widest uppercase border-none px-2 py-0.5 ${isStaff ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : 'bg-slate-100 text-slate-500'
+                                                                        }`}
+                                                                >
+                                                                    {msg.author_role_display}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <span className="hidden md:block w-1 h-1 rounded-full bg-slate-300"></span>
+                                                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 uppercase">
+                                                            <Clock size={10} />
+                                                            {new Date(msg.date_creation).toLocaleString('fr-FR', {
+                                                                day: '2-digit', month: 'short',
+                                                                hour: '2-digit', minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Message Bubble */}
+                                                    <div className={`
+                                                        relative p-4 rounded-2xl md:rounded-3xl shadow-sm border
+                                                        ${isStaff
+                                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30 text-blue-900 dark:text-blue-100'
+                                                            : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-100'}
+                                                    `}>
+                                                        {/* Arrow for the bubble */}
+                                                        <div className={`absolute left-[-6px] top-4 w-3 h-3 rotate-45 border-l border-b ${isStaff ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
+                                                            }`}></div>
+
+                                                        <p className="text-[14px] leading-relaxed font-medium whitespace-pre-wrap relative z-10">
+                                                            {msg.text}
+                                                        </p>
+
+                                                        {/* Attachment in message */}
+                                                        {msg.attachment && (
+                                                            <div className="mt-4 pt-4 border-t border-dashed border-current/10">
+                                                                <a
+                                                                    href={msg.attachment}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className={`
+                                                                        inline-flex items-center gap-3 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider
+                                                                        transition-all duration-300 active:scale-95
+                                                                        ${isStaff
+                                                                            ? 'bg-white dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600'
+                                                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}
+                                                                    `}
+                                                                >
+                                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isStaff ? 'bg-blue-50/50 dark:bg-blue-900/60' : 'bg-white dark:bg-slate-800 shadow-sm'}`}>
+                                                                        <FileText size={16} />
+                                                                    </div>
+                                                                    <div className="flex flex-col text-left">
+                                                                        <span className="opacity-60 text-[8px]">Pièce jointe</span>
+                                                                        <span>Consulter le document</span>
+                                                                    </div>
+                                                                    <ChevronRight size={14} className="ml-2" />
+                                                                </a>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {msg.attachment && (
-                                                    <a
-                                                        href={msg.attachment}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors"
-                                                    >
-                                                        <Paperclip size={12} />
-                                                        Voir la pièce jointe
-                                                    </a>
-                                                )}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                <div className="text-center py-12 text-slate-400 font-medium italic">
-                                    Aucune activité enregistrée pour le moment.
+                                <div className="text-center py-16 px-6">
+                                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-700">
+                                        <MessageSquare size={24} className="text-slate-300 dark:text-slate-600" />
+                                    </div>
+                                    <p className="text-slate-400 dark:text-slate-500 font-bold text-sm tracking-tight uppercase">
+                                        Aucun historique enregistré
+                                    </p>
+                                    <p className="text-slate-300 dark:text-slate-600 text-xs mt-1">
+                                        Les commentaires et notifications s'afficheront ici.
+                                    </p>
                                 </div>
                             )}
                         </CardContent>
@@ -468,7 +542,7 @@ export default function TaskDetail() {
                 {/* Sidebar Column */}
                 <div className="space-y-6">
                     {/* Status Overview Card */}
-                    <Card className="border-none shadow-lg shadow-slate-200/50 text-center">
+                    <Card className="border-none shadow-lg shadow-slate-200/50 dark:shadow-none text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest">Statut Actuel</CardTitle>
                         </CardHeader>
@@ -490,31 +564,31 @@ export default function TaskDetail() {
                     </Card>
 
                     {/* Key Info Card */}
-                    <Card className="border-none shadow-lg shadow-slate-200/50 overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                    <Card className="border-none shadow-lg shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                        <CardHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <Clock size={16} className="text-blue-500" />
                                 Informations Clés
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                 <div className="p-5 space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em]">Échéance</p>
+                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Échéance</p>
                                     <div className="flex items-center justify-between">
-                                        <p className={`text-sm font-bold ${task.est_en_retard ? 'text-red-600' : 'text-slate-900'}`}>{formatDate(task.date_echeance)}</p>
-                                        <Calendar size={16} className="text-slate-300" />
+                                        <p className={`text-sm font-bold ${task.est_en_retard ? 'text-red-600' : 'text-slate-900 dark:text-slate-100'}`}>{formatDate(task.date_echeance)}</p>
+                                        <Calendar size={16} className="text-slate-300 dark:text-slate-600" />
                                     </div>
                                 </div>
                                 <div className="p-5 space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em]">Budget Alloué</p>
+                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Budget Alloué</p>
                                     <div className="flex items-center justify-between text-[var(--color-text-primary)]">
                                         <p className="text-lg font-black">{task.budget_alloue ? task.budget_alloue.toLocaleString() + ' Ar' : '-'}</p>
-                                        <Wallet size={16} className="text-slate-300" />
+                                        <Wallet size={16} className="text-slate-300 dark:text-slate-600" />
                                     </div>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em]">Équipe Assignée</p>
+                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Équipe Assignée</p>
                                     <div className="space-y-2">
                                         {task.agents_assignes_names?.length > 0 ? (
                                             task.agents_assignes_names.map((name, idx) => (
@@ -557,7 +631,7 @@ export default function TaskDetail() {
                     )}
 
                     {/* Quick Financial Action */}
-                    {task.statut === 'en_cours' && (
+                    {task.statut === 'en_cours' && !isAdminOrDG && (
                         <Card className="bg-indigo-600 border-none shadow-xl shadow-indigo-500/20 text-white">
                             <CardContent className="p-6 space-y-4 text-center">
                                 <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">

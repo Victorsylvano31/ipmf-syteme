@@ -84,3 +84,33 @@ class NotificationService:
             link=f"/expenses/{depense.id}",
             obj=depense
         )
+
+    @staticmethod
+    def notify_report_request(demande):
+        """Notifie TOUS les admins et DG d'une nouvelle demande de report."""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        destinataires = set()
+
+        # Tous les admins et DG actifs
+        admins_dgs = User.objects.filter(role__in=['admin', 'dg'], is_active=True)
+        for user in admins_dgs:
+            destinataires.add(user)
+
+        # Le créateur de la tâche si différent
+        if demande.tache.createur != demande.demandeur:
+            destinataires.add(demande.tache.createur)
+
+        for recipient in destinataires:
+            NotificationService.send_notification(
+                recipient=recipient,
+                title="Demande de report reçue ⚠️",
+                message=(
+                    f"{demande.demandeur.get_full_name()} demande un report pour la mission "
+                    f"{demande.tache.numero} : {demande.tache.titre}."
+                ),
+                type='warning',
+                priority='high',
+                link=f"/tasks/{demande.tache.id}",
+                obj=demande
+            )

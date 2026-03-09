@@ -34,37 +34,41 @@ export const KpiCard = ({ label, value, trend, sparkline, color, icon: Icon, loa
     }[color] || { bg: 'bg-slate-50 dark:bg-slate-500/10', text: 'text-slate-600 dark:text-slate-400', spark: '#64748b' };
 
     return (
-        <Card className="overflow-hidden border border-[var(--color-border-light)] shadow-sm hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 bg-[var(--color-bg-card)] relative">
-            <div className={`absolute top-0 left-0 w-1 h-full ${colorClasses.bg.replace('50', '500')} opacity-0 group-hover:opacity-100 transition-opacity`} />
-            <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2.5 rounded-xl ${colorClasses.bg} ${colorClasses.text} group-hover:rotate-12 transition-transform duration-500`}>
-                        <Icon size={20} />
+        <Card className="premium-card overflow-hidden border border-[var(--color-border-light)] shadow-sm hover:shadow-xl transition-all duration-500 group hover:-translate-y-2 bg-[var(--color-bg-card)] relative">
+            {/* Dynamic Glow Background */}
+            <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700 ${colorClasses.bg.replace('50', '500')}`} />
+
+            <div className={`absolute top-0 left-0 w-1.5 h-full ${colorClasses.bg.replace('50', '500')} opacity-0 group-hover:opacity-100 transition-all duration-300`} />
+
+            <CardContent className="p-6 relative z-10">
+                <div className="flex justify-between items-start mb-5">
+                    <div className={`p-3 rounded-2xl ${colorClasses.bg} ${colorClasses.text} group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm`}>
+                        <Icon size={24} />
                     </div>
                     {trend !== undefined && trend !== 0 && (
-                        <div className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full ${isPositive ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'}`}>
-                            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        <div className={`flex items-center gap-1.5 text-[12px] font-bold px-3 py-1 rounded-full backdrop-blur-md border ${isPositive ? 'bg-emerald-50/50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' : 'bg-red-50/50 border-red-100 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400'}`}>
+                            {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                             {Math.abs(trend)}%
                         </div>
                     )}
                 </div>
 
-                <div className="space-y-1">
-                    <h3 className="text-[var(--color-text-muted)] text-[10px] font-bold uppercase tracking-widest">{label}</h3>
-                    <p className="text-2xl font-extrabold text-[var(--color-text-primary)] tracking-tight">{value}</p>
+                <div className="space-y-1.5">
+                    <h3 className="text-[var(--color-text-muted)] text-[11px] font-black uppercase tracking-[0.15em] opacity-80">{label}</h3>
+                    <p className="text-3xl font-black text-[var(--color-text-primary)] tracking-tight leading-none">{value}</p>
                 </div>
 
                 {sparkline && (
-                    <div className="h-10 mt-4 opacity-40 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="h-12 mt-6 opacity-30 group-hover:opacity-100 transition-all duration-700 transform translate-y-1 group-hover:translate-y-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={sparkline}>
                                 <Line
                                     type="monotone"
                                     dataKey="valeur"
                                     stroke={colorClasses.spark}
-                                    strokeWidth={2.5}
+                                    strokeWidth={3}
                                     dot={false}
-                                    animationDuration={2000}
+                                    animationDuration={2500}
                                 />
                             </LineChart>
                         </ResponsiveContainer>

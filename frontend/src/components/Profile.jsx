@@ -4,6 +4,7 @@ import Avatar from './ui/Avatar';
 import AvatarUpload from './Profile/AvatarUpload';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
+import Badge from './ui/Badge';
 import Input from './ui/Input';
 import {
     User,
@@ -136,13 +137,14 @@ export default function Profile() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header Profil Premium */}
-            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-950 p-8 lg:p-10 shadow-2xl border border-white/10 group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/10 transition-colors duration-700"></div>
+            {/* Header Profil Premium Strategic (Version Slim) */}
+            <div className="relative overflow-hidden rounded-[24px] bg-slate-950 bg-mesh-slate p-6 lg:p-8 shadow-xl animate-slide-up border border-white/10 group">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+                <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-white/10 transition-colors duration-700"></div>
 
-                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-10">
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 lg:gap-8">
                     <div className="relative">
-                        <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-110"></div>
+                        <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-110 animate-pulse-subtle"></div>
                         <AvatarUpload
                             currentAvatar={user.photo_url}
                             name={user.full_name || user.username}
@@ -151,18 +153,24 @@ export default function Profile() {
                     </div>
 
                     <div className="text-center md:text-left space-y-3">
-                        <div className="flex flex-col md:flex-row md:items-center gap-3">
-                            <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tight">{user.full_name || user.username}</h1>
-                            <span className="inline-flex px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-black uppercase tracking-widest text-white border border-white/20">
+                        <div className="space-y-1">
+                            <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 backdrop-blur-xl px-2 py-0.5 font-black tracking-[0.1em] uppercase text-[9px] w-fit mx-auto md:mx-0">
+                                ESPACE PERSONNEL
+                            </Badge>
+                            <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                                {user.full_name || user.username}
+                            </h1>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                            <span className="inline-flex px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest text-white border border-white/10 shadow-lg">
                                 {user.role_display}
                             </span>
-                        </div>
-                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                            <span className="flex items-center gap-2 text-blue-100/80 text-sm font-medium">
-                                <ShieldCheck size={16} /> ID: {user.id}
+                            <span className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                                <ShieldCheck size={14} className="text-blue-300" /> ID: {user.id}
                             </span>
-                            <span className="flex items-center gap-2 text-blue-100/80 text-sm font-medium">
-                                <Building size={16} /> {user.departement || 'Aucun département'}
+                            <span className="flex items-center gap-1.5 text-white/70 text-[11px] font-bold bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+                                <Building size={14} className="text-blue-300" /> {user.departement || 'Aucun département'}
                             </span>
                         </div>
                     </div>

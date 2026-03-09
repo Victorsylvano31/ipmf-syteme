@@ -15,6 +15,8 @@ import {
 import { useNotifications } from '../contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
 import styles from '../components/Notifications/NotificationBell.module.css';
 
 const NotificationsPage = () => {
@@ -58,120 +60,97 @@ const NotificationsPage = () => {
         }
     };
 
-    const pageStyle = {
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '24px'
-    };
-
-    const headerStyle = {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
-    };
-
-    const filterContainerStyle = {
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '24px',
-        overflowX: 'auto',
-        paddingBottom: '8px'
-    };
-
-    const filterBtnStyle = (active) => ({
-        padding: '8px 16px',
-        borderRadius: '20px',
-        border: '1px solid #e2e8f0',
-        backgroundColor: active ? '#2c3e50' : 'white',
-        color: active ? 'white' : '#64748b',
-        fontSize: '14px',
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-    });
 
     return (
-        <div style={pageStyle}>
-            <div style={headerStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button
-                        onClick={() => navigate(-1)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+        <div className="max-w-4xl mx-auto p-6 space-y-8 animate-in fade-in duration-500 pb-20">
+            {/* Premium Strategic Banner (Version Slim) */}
+            <div className="relative overflow-hidden rounded-[24px] bg-slate-950 bg-mesh-slate p-6 lg:p-8 shadow-xl animate-slide-up border border-white/10 mb-8">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+
+                <div className="absolute top-0 right-0 p-4 z-20 flex flex-wrap gap-2 justify-end items-center">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={markAllAsRead}
+                        className="text-white bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full px-5 border border-white/10 font-bold h-9 transition-all text-[11px] group"
                     >
-                        <ArrowLeft size={24} />
-                    </button>
-                    <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>Mes Notifications</h1>
+                        <CheckCheck size={14} className="mr-2 group-hover:scale-110 transition-transform" />
+                        <span>Tout marquer lu</span>
+                    </Button>
                 </div>
-                <button
-                    onClick={markAllAsRead}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        border: 'none',
-                        background: 'none',
-                        color: '#3498db',
-                        cursor: 'pointer',
-                        fontWeight: '500'
-                    }}
-                >
-                    <CheckCheck size={18} /> Tout marquer comme lu
-                </button>
+
+                <header className="relative z-10 flex items-center gap-6">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(-1)}
+                        className="w-10 h-10 p-0 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-xl flex-shrink-0"
+                    >
+                        <ArrowLeft size={20} />
+                    </Button>
+                    <div className="space-y-1">
+                        <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 backdrop-blur-xl px-2 py-0.5 font-black tracking-[0.1em] uppercase text-[9px] w-fit">
+                            COMMUNICATIONS
+                        </Badge>
+                        <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                            Mes <span className="text-blue-200">Notifications</span>
+                        </h1>
+                    </div>
+                </header>
             </div>
 
-            <div style={filterContainerStyle}>
-                <button onClick={() => setFilter('all')} style={filterBtnStyle(filter === 'all')}>Toutes</button>
-                <button onClick={() => setFilter('unread')} style={filterBtnStyle(filter === 'unread')}>Non lues</button>
-                <button onClick={() => setFilter('task')} style={filterBtnStyle(filter === 'task')}>Missions</button>
-                <button onClick={() => setFilter('finance')} style={filterBtnStyle(filter === 'finance')}>Finances</button>
+            <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
+                {[
+                    { id: 'all', label: 'Toutes' },
+                    { id: 'unread', label: 'Non lues' },
+                    { id: 'task', label: 'Missions' },
+                    { id: 'finance', label: 'Finances' }
+                ].map(item => (
+                    <button
+                        key={item.id}
+                        onClick={() => setFilter(item.id)}
+                        className={`
+                            px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap
+                            ${filter === item.id
+                                ? 'bg-slate-900 dark:bg-blue-600 text-white shadow-lg scale-105'
+                                : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-blue-500/50'}
+                        `}
+                    >
+                        {item.label}
+                    </button>
+                ))}
             </div>
 
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div className="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 {filteredNotifications.length === 0 ? (
-                    <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                        <Bell size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
-                        <p>Aucune notification trouvée</p>
+                    <div className="py-20 px-6 text-center text-slate-400 dark:text-slate-500">
+                        <Bell size={48} className="mx-auto mb-4 opacity-20" />
+                        <p className="font-bold">Aucune notification trouvée</p>
                     </div>
                 ) : (
                     filteredNotifications.map((notif) => (
                         <div
                             key={notif.id}
-                            style={{
-                                padding: '20px',
-                                borderBottom: '1px solid #f1f5f9',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s',
-                                display: 'flex',
-                                gap: '16px',
-                                backgroundColor: !notif.is_read ? '#f8fafc' : 'white',
-                                position: 'relative'
-                            }}
+                            className={`
+                                p-5 border-b border-slate-100 dark:border-slate-800/50 cursor-pointer transition-all flex gap-4 relative
+                                ${!notif.is_read ? 'bg-blue-50/50 dark:bg-blue-500/5' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}
+                            `}
                             onClick={() => handleNotificationClick(notif)}
                         >
                             {!notif.is_read && (
-                                <div style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: '4px',
-                                    backgroundColor: '#3498db'
-                                }} />
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
                             )}
-                            <div className={`${styles.iconWrapper} ${getIconClass(notif.type)}`} style={{ width: '44px', height: '44px' }}>
+                            <div className={`${styles.iconWrapper} ${getIconClass(notif.type)} flex-shrink-0 w-11 h-11`}>
                                 {getIcon(notif.type)}
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>{notif.title}</h4>
-                                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className="text-[15px] font-bold text-slate-900 dark:text-white leading-tight">{notif.title}</h4>
+                                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                                         {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}
                                     </span>
                                 </div>
-                                <p style={{ margin: 0, fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                                     {notif.message}
                                 </p>
                             </div>

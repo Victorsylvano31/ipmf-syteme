@@ -122,40 +122,54 @@ class TacheViewSet(viewsets.ModelViewSet):
     def valider(self, request, pk=None):
         """Valider une tâche (DG ou admin)"""
         tache = self.get_object()
-        serializer = TacheActionSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        if not tache.peut_valider(request.user):
+
+        # Vérification du rôle
+        if request.user.role not in ['admin', 'dg'] and not request.user.is_superuser:
             return Response(
-                {'error': "Vous ne pouvez pas valider cette tâche"}, 
+                {'error': "Seuls les administrateurs et le Directeur Général peuvent valider une tâche."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
+        # Vérification du statut
         if tache.statut != 'terminee':
             return Response(
-                {'error': "Seules les tâches terminées peuvent être validées"}, 
+                {'error': f"La tâche doit être à l'état 'terminée' pour être validée. Statut actuel : {tache.get_statut_display()}."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        commentaire = request.data.get('commentaire', 'Validation effectuée.')
+        attachment = request.FILES.get('attachment', None)
+
         tache.statut = 'validee'
         tache.valide_par = request.user
         tache.date_validation = timezone.now()
-        tache.commentaire_validation = serializer.validated_data.get('commentaire', '')
+        tache.commentaire_validation = commentaire
         tache.save()
-        
-        # Créer un commentaire
+
+        # Commentaire dans l'historique
         CommentaireTache.objects.create(
             tache=tache,
             auteur=request.user,
-            message=f"Tâche validée: {serializer.validated_data.get('commentaire', 'Validation effectuée')}",
-            piece_jointe=serializer.validated_data.get('attachment')
+            message=f"✅ Mission validée par {request.user.get_full_name()}. {commentaire}",
+            piece_jointe=attachment
         )
-        
+
+        # Notifier les agents assignés
+        for agent in tache.agents_assignes.all():
+            NotificationService.send_notification(
+                recipient=agent,
+                title="✅ Mission validée !",
+                message=f"La mission {tache.numero} : {tache.titre} a été validée par {request.user.get_full_name()}.",
+                type='success',
+                priority='high',
+                link=f"/tasks/{tache.id}",
+                obj=tache
+            )
+
         self.log_action(request.user, f"Tache {tache.numero} validee", tache, action_type='validation')
-        
-        return Response(TacheSerializer(tache).data)
+
+        return Response(TacheSerializer(tache, context={'request': request}).data)
+
     
     @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):
@@ -330,26 +344,8 @@ class DemandeReportViewSet(viewsets.ModelViewSet):
              
         demande = serializer.save(demandeur=user)
         
-        # Notifier les admins/DG
-        NotificationService.send_notification(
-            recipient=None, # Broadcast to group if possible, or loop admins? 
-            # Simplified: assuming we notify specific roles later or loop here.
-            # For now, let's notify the task creator or a generic admin account if exists.
-            # Ideally NotificationService handles role-based notifs.
-            title="Nouvelle demande de report",
-            message=f"L'agent {user.username} demande un report pour la tâche {tache.numero}",
-            type='warning',
-            link=f"/tasks/{tache.id}"
-        )
-        # Notify task creator if different from demandeur
-        if tache.createur != user:
-             NotificationService.send_notification(
-                recipient=tache.createur,
-                title="Demande de report",
-                message=f"Demande de report pour votre tâche {tache.numero}",
-                type='warning',
-                link=f"/tasks/{tache.id}"
-            )
+        # Notifier tous les admins/DG via le service centralisé
+        NotificationService.notify_report_request(demande)
 
     @action(detail=True, methods=['post'])
     def approuver(self, request, pk=None):
@@ -445,20 +441,29 @@ class SousTacheViewSet(viewsets.ModelViewSet):
         if user.role in ['admin', 'dg']:
             return SousTache.objects.all()
         else:
+            # Un agent ne voit que les sous-tâches des missions qui lui sont assignées
             return SousTache.objects.filter(
-                Q(tache__createur=user) | Q(tache__agents_assignes=user)
+                Q(tache__agents_assignes=user) | Q(assigne_a=user)
             ).distinct()
 
     def perform_create(self, serializer):
-        tache = serializer.validated_data['tache']
         user = self.request.user
-        if user.role not in ['admin', 'dg'] and tache.createur != user and not tache.agents_assignes.filter(id=user.id).exists():
-            raise PermissionDenied('Vous n''avez pas la permission d''ajouter des sous-tâches à cette mission.')
+        # Seuls les admins et DG peuvent créer des sous-tâches
+        if user.role not in ['admin', 'dg']:
+            raise PermissionDenied("Seuls les administrateurs et le Directeur Général peuvent ajouter des sous-tâches.")
         serializer.save()
 
     @action(detail=True, methods=['post'])
     def toggle(self, request, pk=None):
+        """Marquer une sous-tâche comme terminée ou non."""
         sous_tache = self.get_object()
+        user = request.user
+        # Seul l'admin, le DG, ou l'agent auquel la sous-tâche est assignée peut la basculer
+        if user.role not in ['admin', 'dg']:
+            if sous_tache.assigne_a != user:
+                raise PermissionDenied("Vous ne pouvez pas modifier cette sous-tâche.")
+            if sous_tache.tache.statut in ['terminee', 'validee', 'annulee']:
+                raise PermissionDenied("Vous ne pouvez pas modifier une sous-tâche d'une mission terminée.")
         sous_tache.est_terminee = not sous_tache.est_terminee
         if sous_tache.est_terminee:
             sous_tache.date_fin = timezone.now()

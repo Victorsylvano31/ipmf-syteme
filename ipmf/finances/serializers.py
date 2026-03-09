@@ -71,6 +71,8 @@ class DepenseSerializer(serializers.ModelSerializer):
     can_validate = serializers.SerializerMethodField()
     can_pay = serializers.SerializerMethodField()
     can_reject = serializers.SerializerMethodField()
+    tache_titre = serializers.CharField(source='tache.titre', read_only=True)
+    tache_budget = serializers.DecimalField(source='tache.budget_alloue', max_digits=12, decimal_places=2, read_only=True)
     
     valide_par_comptable_name = serializers.CharField(source='valide_par_comptable.get_full_name', read_only=True)
     valide_par_dg_name = serializers.CharField(source='valide_par_dg.get_full_name', read_only=True)
@@ -84,7 +86,7 @@ class DepenseSerializer(serializers.ModelSerializer):
             'delai_attente', 'est_en_retard', 'can_verify', 'can_validate', 'can_pay', 'can_reject',
             'valide_par_comptable', 'valide_par_comptable_name', 'valide_par_dg', 'valide_par_dg_name',
             'date_validation_comptable', 'date_validation_dg', 'commentaire_validation',
-            'tache', 'approved_by_system'
+            'tache', 'tache_titre', 'tache_budget', 'approved_by_system'
         ]
         read_only_fields = (
             'numero', 'created_by', 'created_at', 'montant_format', 'statut',

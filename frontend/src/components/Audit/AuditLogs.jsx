@@ -91,16 +91,33 @@ export default function AuditLogs() {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-[var(--color-text-primary)] tracking-tight">Journal d'Audit</h1>
-                    <p className="text-[var(--color-text-muted)] font-medium">Traçabilité complète des actions du système</p>
+            {/* Premium Strategic Banner (Version Slim) */}
+            <div className="relative overflow-hidden rounded-[24px] bg-slate-950 bg-mesh-slate p-6 lg:p-8 shadow-xl animate-slide-up border border-white/10 mb-8">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+
+                <div className="absolute top-0 right-0 p-4 z-20 flex flex-wrap gap-3 justify-end items-center">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { }}
+                        className="text-white/60 hover:text-white hover:bg-white/10 backdrop-blur-md rounded-full px-5 border border-white/5 font-bold text-[11px] uppercase tracking-widest h-9 transition-all"
+                    >
+                        <Download size={14} className="mr-2" />
+                        <span>Exporter</span>
+                    </Button>
                 </div>
-                <Button variant="secondary" onClick={() => { }} className="gap-2 shadow-sm">
-                    <Download size={18} />
-                    <span>Exporter</span>
-                </Button>
-            </header>
+
+                <header className="relative z-10 flex items-center gap-6">
+                    <div className="space-y-1">
+                        <Badge variant="outline" className="bg-slate-500/20 text-slate-300 border-slate-500/30 backdrop-blur-xl px-2 py-0.5 font-black tracking-[0.1em] uppercase text-[9px] w-fit">
+                            SÉCURITÉ & CONTRÔLE
+                        </Badge>
+                        <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                            Journal <span className="text-slate-400">d'Audit</span>
+                        </h1>
+                    </div>
+                </header>
+            </div>
 
             {/* Filters */}
             <Card className="shadow-sm border-[var(--color-border-light)] overflow-visible">
@@ -173,6 +190,55 @@ export default function AuditLogs() {
                         </div>
                     </div>
                 </CardContent>
+            </Card>
+
+            {/* Summary Cards */}
+            <Card className="shadow-sm border-[var(--color-border-light)] overflow-hidden">
+                {loading ? (
+                    <div className="p-20 text-center">
+                        <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4 shadowed-blue"></div>
+                        <p className="text-[var(--color-text-muted)] font-medium">Chargement des logs...</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+                        <div className="p-5 bg-[var(--color-bg-hover)] rounded-3xl border border-[var(--color-border-light)] flex items-center gap-4">
+                            <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                                <Activity size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-[var(--color-text-muted)]">Total Logs</p>
+                                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{logs.length}</p>
+                            </div>
+                        </div>
+                        <div className="p-5 bg-[var(--color-bg-hover)] rounded-3xl border border-[var(--color-border-light)] flex items-center gap-4">
+                            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                                <Database size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-[var(--color-text-muted)]">Créations</p>
+                                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{logs.filter(log => log.action_type === 'create').length}</p>
+                            </div>
+                        </div>
+                        <div className="p-5 bg-[var(--color-bg-hover)] rounded-3xl border border-[var(--color-border-light)] flex items-center gap-4">
+                            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
+                                <ShieldAlert size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-[var(--color-text-muted)]">Erreurs</p>
+                                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{logs.filter(log => log.niveau === 'error' || log.niveau === 'critical').length}</p>
+                            </div>
+                        </div>
+                        <div className="p-5 bg-[var(--color-bg-hover)] rounded-3xl border border-[var(--color-border-light)] flex items-center gap-4">
+                            <div className="p-3 bg-purple-500/10 text-purple-500 rounded-xl">
+                                <UserIcon size={24} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-[var(--color-text-muted)]">Connexions</p>
+                                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{logs.filter(log => log.action_type === 'login').length}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Table */}

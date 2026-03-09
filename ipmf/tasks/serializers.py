@@ -20,10 +20,11 @@ class TacheSerializer(serializers.ModelSerializer):
     """
     
     # Champs read-only calculés pour affichage
-    createur_name = serializers.CharField(source='createur.get_full_name', read_only=True)  # Nom complet du créateur
-    agents_assignes_names = serializers.SerializerMethodField() # Noms des agents assignés
-    statut_display = serializers.CharField(source='get_statut_display', read_only=True)  # Libellé lisible du statut
-    priorite_display = serializers.CharField(source='get_priorite_display', read_only=True)  # Libellé lisible de la priorité
+    createur_name = serializers.CharField(source='createur.get_full_name', read_only=True)
+    agents_assignes_names = serializers.SerializerMethodField()
+    agent_principal_name = serializers.SerializerMethodField()
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    priorite_display = serializers.CharField(source='get_priorite_display', read_only=True)
     
     # Propriétés calculées du modèle
     jours_restants = serializers.IntegerField(read_only=True)  # Nombre de jours jusqu'à l'échéance
@@ -49,16 +50,17 @@ class TacheSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'numero', 'titre', 'description', 'date_creation', 'date_debut', 'date_echeance',
             'priorite', 'priorite_display', 'statut', 'statut_display', 'createur', 'createur_name',
-            'agents_assignes', 'agents_assignes_names', 'budget_alloue', 'resultat', 'piece_jointe_resultat', 'piece_jointe_name',
+            'agents_assignes', 'agents_assignes_names', 'agent_principal', 'agent_principal_name',
+            'budget_alloue', 'resultat', 'piece_jointe_resultat', 'piece_jointe_name',
             'date_debut_reelle', 'date_fin_reelle', 'commentaire_validation', 'valide_par', 'valide_par_name',
             'date_validation', 'jours_restants', 'est_en_retard', 'pourcentage_avancement',
-            'peut_demarrer', 'peut_terminer', 'peut_valider', 'peut_annuler',
             'peut_demarrer', 'peut_terminer', 'peut_valider', 'peut_annuler',
             'messages', 'pending_report', 'budget_restant', 'sous_taches'
         ]
         read_only_fields = (
             'numero', 'createur', 'date_creation', 'jours_restants', 'est_en_retard', 
-            'pourcentage_avancement', 'valide_par', 'date_validation', 'pending_report', 'budget_restant'
+            'pourcentage_avancement', 'valide_par', 'date_validation', 'pending_report', 'budget_restant',
+            'agent_principal_name'
         )
 
     def get_budget_restant(self, obj):
@@ -76,6 +78,13 @@ class TacheSerializer(serializers.ModelSerializer):
             return DemandeReportSerializer(pending).data
         return None
     
+    def get_agent_principal_name(self, obj):
+        """Retourne le nom de l'agent principal (défini ou déduit)."""
+        principal = obj._get_agent_principal()
+        if principal:
+            return principal.get_full_name()
+        return None
+
     def get_agents_assignes_names(self, obj):
         """Retourne la liste des noms complets des agents assignés."""
         return [user.get_full_name() for user in obj.agents_assignes.all()]
@@ -140,13 +149,27 @@ class TacheSerializer(serializers.ModelSerializer):
     
 class CommentaireTacheSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='auteur.get_full_name', read_only=True)
+    author_role = serializers.CharField(source='auteur.role', read_only=True)
+    author_role_display = serializers.CharField(source='auteur.get_role_display', read_only=True)
+    author_photo = serializers.SerializerMethodField()
     text = serializers.CharField(source='message', read_only=True)
     attachment = serializers.FileField(source='piece_jointe', read_only=True)
     
     class Meta:
         model = CommentaireTache
-        fields = ['id', 'tache', 'auteur', 'author', 'text', 'attachment', 'date_creation']
+        fields = [
+            'id', 'tache', 'auteur', 'author', 'author_role', 
+            'author_role_display', 'author_photo', 'text', 'attachment', 'date_creation'
+        ]
         read_only_fields = ('auteur', 'date_creation')
+
+    def get_author_photo(self, obj):
+        try:
+            if obj.auteur.profile.photo:
+                return obj.auteur.profile.photo.url
+        except:
+            pass
+        return None
     
     def create(self, validated_data):
         request = self.context.get('request')

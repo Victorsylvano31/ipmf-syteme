@@ -46,6 +46,15 @@ class Tache(models.Model):
         verbose_name="Agents assignés",
         blank=True
     )
+    agent_principal = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='taches_comme_principal',
+        null=True,
+        blank=True,
+        verbose_name="Agent principal (responsable)",
+        help_text="Responsable du démarrage et de la clôture. Si non défini, le premier agent assigné est utilisé."
+    )
     
     # Budget et résultats
     budget_alloue = models.DecimalField(
@@ -139,13 +148,21 @@ class Tache(models.Model):
         }
         return avancement_map.get(self.statut, 0)
     
+    def _get_agent_principal(self):
+        """Retourne l'agent principal ou le premier agent assigné par ordre d'ID."""
+        if self.agent_principal_id:
+            return self.agent_principal
+        return self.agents_assignes.order_by('id').first()
+
     def peut_demarrer(self, user):
-        """Vérifie si l'utilisateur peut démarrer cette tâche"""
-        return self.agents_assignes.filter(id=user.id).exists() and self.statut == 'creee'
+        """Seul l'agent principal peut démarrer la mission."""
+        principal = self._get_agent_principal()
+        return principal is not None and user.id == principal.id and self.statut == 'creee'
     
     def peut_terminer(self, user):
-        """Vérifie si l'utilisateur peut terminer cette tâche"""
-        return self.agents_assignes.filter(id=user.id).exists() and self.statut == 'en_cours'
+        """Seul l'agent principal peut marquer la mission comme terminée."""
+        principal = self._get_agent_principal()
+        return principal is not None and user.id == principal.id and self.statut == 'en_cours'
     
     def peut_valider(self, user):
         """Vérifie si l'utilisateur peut valider cette tâche"""

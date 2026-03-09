@@ -101,41 +101,48 @@ export default function ExpenseDetail() {
                     <div className={styles.tableWrapper} style={{ padding: '24px' }}>
                         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Motif / Objet</label>
-                                <h2 style={{ fontSize: '1.25rem', color: '#1e293b', marginTop: '4px' }}>{expense.motif}</h2>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Motif / Objet</label>
+                                <h2 style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', marginTop: '4px' }}>{expense.motif}</h2>
+                                {expense.tache_titre && (
+                                    <div style={{ marginTop: '12px', padding: '10px 14px', background: 'var(--color-bg-hover)', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
+                                        <label style={{ fontSize: '0.65rem', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Mission & Budget DG</label>
+                                        <p style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>{expense.tache_titre}</p>
+                                        <p style={{ fontSize: '0.8125rem', color: '#6366f1', fontWeight: '600', marginTop: '2px' }}>Budget Alloué : {formatCurrency(expense.tache_budget)}</p>
+                                    </div>
+                                )}
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Montant Total</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Montant Demandé</label>
                                 <p style={{ fontSize: '1.75rem', fontWeight: '800', color: '#ef4444', marginTop: '4px' }}>{formatCurrency(expense.montant)}</p>
-                                <p style={{ fontSize: '0.875rem', color: '#64748b' }}>{expense.quantite} x {formatCurrency(expense.prix_unitaire)}</p>
+                                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>{expense.quantite} x {formatCurrency(expense.prix_unitaire)}</p>
                             </div>
                         </div>
 
                         {expense.commentaire && (
-                            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', marginBottom: '24px' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ padding: '16px', background: 'var(--color-bg-hover)', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--color-border-light)' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <MessageSquare size={14} /> Justification
                                 </label>
-                                <p style={{ marginTop: '8px', color: '#334155', lineHeight: '1.5' }}>{expense.commentaire}</p>
+                                <p style={{ marginTop: '8px', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>{expense.commentaire}</p>
                             </div>
                         )}
 
                         <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Date de demande</label>
-                                <p style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Date de demande</label>
+                                <p style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', color: 'var(--color-text-primary)' }}>
                                     <Calendar size={14} /> {formatDate(expense.created_at)}
                                 </p>
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Demandeur</label>
-                                <p style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Demandeur</label>
+                                <p style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', color: 'var(--color-text-primary)' }}>
                                     <User size={14} /> {expense.created_by_name}
                                 </p>
                             </div>
                             {expense.statut === 'payee' && (
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', color: '#64748b' }}>Payé le</label>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Payé le</label>
                                     <p style={{ fontWeight: '500', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                                         <CheckCircle size={14} /> {formatDate(expense.date_paiement)}
                                     </p>
@@ -166,16 +173,16 @@ export default function ExpenseDetail() {
                                     placeholder="Commentaire ou motif de rejet..."
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', fontSize: '0.875rem', outline: 'none' }}
                                     rows="3"
                                 />
                             )}
 
                             {/* Security Alert for Creator */}
                             {isCreator && expense.statut !== 'payee' && expense.statut !== 'rejetee' && (
-                                <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #dbeafe', fontSize: '0.875rem', color: '#1e40af', display: 'flex', gap: '8px' }}>
+                                <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)', fontSize: '0.875rem', color: '#3b82f6', display: 'flex', gap: '8px' }}>
                                     <Info size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                    <span>Vous avez créé cette demande. Vous ne pouvez pas la valider vous-même.</span>
+                                    <span style={{ fontWeight: '500' }}>Vous avez créé cette demande. Vous ne pouvez pas la valider vous-même.</span>
                                 </div>
                             )}
 
@@ -194,9 +201,12 @@ export default function ExpenseDetail() {
                                     </button>
                                 ) : (
                                     !isCreator && (
-                                        <div style={{ padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fef3c7', fontSize: '0.875rem', color: '#92400e' }}>
-                                            <Info size={16} style={{ marginBottom: '4px' }} />
-                                            En attente de validation par {expense.necessite_validation_dg ? 'le DG' : 'le Comptable'}.
+                                        <div style={{ padding: '12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.875rem', color: '#f59e0b' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                                                <Info size={16} />
+                                                <span style={{ fontWeight: '700', textTransform: 'uppercase', fontSize: '0.75rem' }}>Attente de Validation</span>
+                                            </div>
+                                            <p style={{ fontWeight: '500' }}>En attente de validation par {expense.necessite_validation_dg ? 'le DG' : 'le Comptable'}.</p>
                                         </div>
                                     )
                                 )
@@ -235,27 +245,27 @@ export default function ExpenseDetail() {
 
                     {/* Progress Monitor */}
                     <div className={styles.tableWrapper} style={{ padding: '20px' }}>
-                        <h3 style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px' }}>HISTORIQUE DES ÉTAPES</h3>
-                        <div style={{ display: 'grid', gap: '12px', borderLeft: '2px solid #f1f5f9', paddingLeft: '16px', marginLeft: '6px' }}>
+                        <h3 style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>HISTORIQUE DES ÉTAPES</h3>
+                        <div style={{ display: 'grid', gap: '12px', borderLeft: '2px solid var(--color-border-light)', paddingLeft: '16px', marginLeft: '6px' }}>
                             <div style={{ position: 'relative' }}>
-                                <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#10b981', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid white', boxShadow: '0 0 0 1px #f1f5f9' }} />
-                                <p style={{ fontSize: '0.875rem', fontWeight: '600' }}>Création</p>
-                                <p style={{ fontSize: '0.75rem', color: '#64748b' }}>{expense.created_by_name} - {formatDate(expense.created_at)}</p>
+                                <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#10b981', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid var(--color-bg-card)', boxShadow: '0 0 0 1px var(--color-border-light)' }} />
+                                <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>Création</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{expense.created_by_name} - {formatDate(expense.created_at)}</p>
                             </div>
 
                             {expense.verifie_par && (
                                 <div style={{ position: 'relative' }}>
-                                    <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#3b82f6', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid white', boxShadow: '0 0 0 1px #f1f5f9' }} />
-                                    <p style={{ fontSize: '0.875rem', fontWeight: '600' }}>Vérification</p>
-                                    <p style={{ fontSize: '0.75rem', color: '#64748b' }}>{expense.verifie_par_name} - {formatDate(expense.date_verification)}</p>
+                                    <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#3b82f6', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid var(--color-bg-card)', boxShadow: '0 0 0 1px var(--color-border-light)' }} />
+                                    <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>Vérification</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{expense.verifie_par_name} - {formatDate(expense.date_verification)}</p>
                                 </div>
                             )}
 
                             {(expense.valide_par_comptable || expense.valide_par_dg) && (
                                 <div style={{ position: 'relative' }}>
-                                    <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#10b981', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid white', boxShadow: '0 0 0 1px #f1f5f9' }} />
-                                    <p style={{ fontSize: '0.875rem', fontWeight: '600' }}>Approbation</p>
-                                    <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                    <div style={{ position: 'absolute', left: '-25px', top: '0', background: '#10b981', width: '16px', height: '16px', borderRadius: '50%', border: '4px solid var(--color-bg-card)', boxShadow: '0 0 0 1px var(--color-border-light)' }} />
+                                    <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>Approbation</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                                         {expense.valide_par_dg_name || expense.valide_par_comptable_name}
                                     </p>
                                 </div>

@@ -49,10 +49,10 @@
     --color-gray-800: #1E293B;
     --color-gray-900: #0F172A;
 
-    /* Texte (mode clair par défaut) */
+    /* Texte (mode clair par défaut) - Renforcé pour lisibilité */
     --color-text-primary: var(--color-gray-900);
-    --color-text-secondary: var(--color-gray-600);
-    --color-text-muted: var(--color-gray-500);
+    --color-text-secondary: var(--color-gray-700);
+    --color-text-muted: var(--color-gray-600);
 
     /* Arrière-plans */
     --color-bg-main: #F4F7F9;
@@ -127,9 +127,10 @@
     --shadow-blue: 0 10px 25px -5px rgba(59, 130, 246, 0.2), 0 8px 10px -6px rgba(59, 130, 246, 0.1);
 
     /* =========== GLASSMORPHISM =========== */
-    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.45);
     --glass-border: rgba(255, 255, 255, 0.4);
-    --glass-blur: 12px;
+    --glass-blur: 16px;
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 
     /* =========== TRANSITIONS =========== */
 
@@ -180,8 +181,10 @@
     --focus-ring: 0 0 0 3px rgba(58, 155, 220, 0.3);
 
     /* Glassmorphism Dark Mode */
-    --glass-bg: rgba(15, 23, 42, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(15, 23, 42, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: 20px;
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Base Transition for Theme Change */
@@ -226,12 +229,92 @@
     background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
 }
 
+/* =========== PREMIUM BACKGROUNDS & MESH =========== */
+
+.bg-mesh-blue {
+    background-color: #1e3a8a;
+    /* Base bleue foncée (blue-900) pour contraste */
+    background-image:
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.4) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(147, 197, 253, 0.2) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(30, 64, 175, 0.3) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(96, 165, 250, 0.3) 0px, transparent 50%);
+}
+
+[data-theme="dark"] .bg-mesh-blue {
+    background-color: #0f172a;
+    background-image:
+        radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.4) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(17, 24, 39, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(29, 78, 216, 0.3) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(15, 23, 42, 0.1) 0px, transparent 50%);
+}
+
+.bg-mesh-indigo {
+    background-color: #312e81;
+    /* Base indigo foncée (indigo-900) */
+    background-image:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.4) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(165, 180, 252, 0.2) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(67, 56, 202, 0.3) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(129, 140, 248, 0.3) 0px, transparent 50%);
+}
+
+[data-theme="dark"] .bg-mesh-indigo {
+    background-color: #1e1b4b;
+    background-image:
+        radial-gradient(at 0% 0%, rgba(49, 46, 129, 0.5) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(17, 24, 39, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(67, 56, 202, 0.4) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(15, 23, 42, 0.1) 0px, transparent 50%);
+}
+
+.bg-mesh-slate {
+    background-color: #0f172a;
+    /* Base slate foncée (slate-900) */
+    background-image:
+        radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.7) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(15, 23, 42, 0.5) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(51, 65, 85, 0.5) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(15, 23, 42, 0.7) 0px, transparent 50%);
+}
+
+[data-theme="dark"] .bg-mesh-slate {
+    background-image:
+        radial-gradient(at 0% 0%, rgba(15, 23, 42, 0.8) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(30, 41, 59, 0.2) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(30, 41, 59, 0.2) 0px, transparent 50%);
+}
+
+.bg-grid-pattern {
+    background-size: 40px 40px;
+    background-image:
+        linear-gradient(to right, var(--color-border-light) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--color-border-light) 1px, transparent 1px);
+    background-position: center;
+}
+
+[data-theme="dark"] .bg-grid-pattern {
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
 .soft-glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
 }
 
 .soft-glow-emerald {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
+}
+
+.shadow-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.shadow-glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
 }
 
 /* Animations d'entrée */
@@ -265,6 +348,54 @@
 
 .stagger-4 {
     animation-delay: 0.4s;
+}
+
+/* PREMIUM ANIMATIONS */
+@keyframes shine {
+    from {
+        left: -100%;
+    }
+
+    to {
+        left: 100%;
+    }
+}
+
+@keyframes pulse-subtle {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.animate-shine::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(to right,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.1),
+            transparent);
+    animation: shine 4s infinite linear;
+}
+
+.animate-pulse-subtle {
+    animation: pulse-subtle 3s infinite ease-in-out;
 }
 
 /* =========== UTILITAIRES GLOBAUX =========== */

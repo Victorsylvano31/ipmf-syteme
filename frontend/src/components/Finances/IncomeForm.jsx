@@ -81,9 +81,9 @@ export default function IncomeForm() {
         return (
             <div className={styles.financeContainer}>
                 <div style={{ padding: '40px', textAlign: 'center' }}>
-                    <div style={{ background: '#fee2e2', color: '#991b1b', padding: '24px', borderRadius: '12px', border: '1px solid #fecaca' }}>
-                        <h2 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Accès Restreint</h2>
-                        <p>Votre rôle (<strong>{user?.role}</strong>) ne possède pas les permissions nécessaires pour enregistrer des entrées d'argent.</p>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '24px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <h2 style={{ fontSize: '1.25rem', marginBottom: '12px', fontWeight: '700' }}>Accès Restreint</h2>
+                        <p style={{ fontWeight: '500' }}>Votre rôle (<strong>{user?.role}</strong>) ne possède pas les permissions nécessaires pour enregistrer des entrées d'argent.</p>
                         <Link to="/finances" className={styles.btnSecondary} style={{ marginTop: '24px', display: 'inline-flex' }}>
                             Retour aux finances
                         </Link>
@@ -102,7 +102,7 @@ export default function IncomeForm() {
                     </Link>
                     <div>
                         <h1 className={styles.title}>Enregistrer une Entrée</h1>
-                        <p style={{ color: '#64748b', marginTop: '4px' }}>Ajouter un nouveau flux de trésorerie</p>
+                        <p style={{ color: 'var(--color-text-muted)', marginTop: '4px' }}>Ajouter un nouveau flux de trésorerie</p>
                     </div>
                 </div>
             </header>
@@ -116,7 +116,7 @@ export default function IncomeForm() {
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '24px' }}>
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Motif / Objet</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Motif / Objet</label>
                         <input
                             type="text"
                             name="motif"
@@ -124,15 +124,15 @@ export default function IncomeForm() {
                             placeholder="Ex: Paiement facture #1234"
                             value={formData.motif}
                             onChange={handleChange}
-                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                         />
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Montant (Ar)</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Montant (Ar)</label>
                             <div style={{ position: 'relative' }}>
-                                <DollarSign size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                <DollarSign size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                                 <input
                                     type="number"
                                     name="montant"
@@ -140,66 +140,66 @@ export default function IncomeForm() {
                                     placeholder="0.00"
                                     value={formData.montant}
                                     onChange={handleChange}
-                                    style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                                    style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                                 />
                             </div>
                         </div>
 
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Mode de paiement</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Mode de paiement</label>
                             <select
                                 name="mode_paiement"
                                 value={formData.mode_paiement}
                                 onChange={handleChange}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                             >
-                                <option value="especes">Espèces</option>
-                                <option value="virement">Virement bancaire</option>
-                                <option value="cheque">Chèque</option>
-                                <option value="carte">Carte bancaire</option>
-                                <option value="mobile">Paiement mobile</option>
+                                <option value="especes" style={{ background: 'var(--color-bg-card)' }}>Espèces</option>
+                                <option value="virement" style={{ background: 'var(--color-bg-card)' }}>Virement bancaire</option>
+                                <option value="cheque" style={{ background: 'var(--color-bg-card)' }}>Chèque</option>
+                                <option value="carte" style={{ background: 'var(--color-bg-card)' }}>Carte bancaire</option>
+                                <option value="mobile" style={{ background: 'var(--color-bg-card)' }}>Paiement mobile</option>
                             </select>
                         </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Date d'entrée</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Date d'entrée</label>
                             <div style={{ position: 'relative' }}>
-                                <Calendar size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                <Calendar size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                                 <input
                                     type="date"
                                     name="date_entree"
                                     required
                                     value={formData.date_entree}
                                     onChange={handleChange}
-                                    style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                                    style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none', colorScheme: 'dark' }}
                                 />
                             </div>
                         </div>
 
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Pièce justificative</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Pièce justificative</label>
                             <div style={{ position: 'relative' }}>
-                                <Upload size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                <Upload size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                                 <input
                                     type="file"
                                     onChange={handleFileChange}
-                                    style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '0.875rem', background: 'var(--color-bg-hover)', color: 'var(--color-text-muted)', outline: 'none' }}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Commentaire (optionnel)</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Commentaire (optionnel)</label>
                         <textarea
                             name="commentaire"
                             placeholder="Détails supplémentaires..."
                             value={formData.commentaire}
                             onChange={handleChange}
                             rows="3"
-                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', resize: 'vertical' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', resize: 'vertical', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                         />
                     </div>
 

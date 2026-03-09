@@ -156,4 +156,3 @@ class DashboardView(models.Model):
             # S'assurer qu'il n'y a qu'une seule vue par défaut par utilisateur
             DashboardView.objects.filter(user=self.user, est_defaut=True).update(est_defaut=False)
         super().save(*args, **kwargs)
-        

@@ -127,7 +127,7 @@ export default function ExpenseForm() {
                     </Link>
                     <div>
                         <h1 className={styles.title}>Nouvelle Dépense</h1>
-                        <p style={{ color: '#64748b', marginTop: '4px' }}>Enregistrer un décaissement ou une demande d'achat</p>
+                        <p style={{ color: 'var(--color-text-muted)', marginTop: '4px' }}>Enregistrer un décaissement ou une demande d'achat</p>
                     </div>
                 </div>
             </header>
@@ -143,7 +143,7 @@ export default function ExpenseForm() {
 
                     {/* Mission Selection Linked to Auto-Approval */}
                     {tasks.length > 0 && (
-                        <div className={styles.formGroup} style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div className={styles.formGroup} style={{ background: 'var(--color-bg-hover)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Briefcase size={18} /> Lier à une Mission (Optionnel)
                             </label>
@@ -151,27 +151,27 @@ export default function ExpenseForm() {
                                 name="tache"
                                 value={formData.tache}
                                 onChange={handleChange}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-card)', color: 'var(--color-text-primary)', outline: 'none' }}
                             >
-                                <option value="">-- Aucune mission liée --</option>
+                                <option value="" style={{ background: 'var(--color-bg-card)' }}>-- Aucune mission liée --</option>
                                 {tasks.map(t => (
-                                    <option key={t.id} value={t.id}>
+                                    <option key={t.id} value={t.id} style={{ background: 'var(--color-bg-card)' }}>
                                         {t.numero} - {t.titre}
                                     </option>
                                 ))}
                             </select>
 
                             {selectedTask && (
-                                <div style={{ marginTop: '12px', fontSize: '0.875rem', color: '#475569' }}>
+                                <div style={{ marginTop: '12px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                         <span>Budget Restant :</span>
                                         <span style={{ fontWeight: '700', color: (selectedTask.budget_restant - total) >= 0 ? '#10b981' : '#ef4444' }}>
                                             {formatCurrency(selectedTask.budget_restant)}
                                         </span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', padding: '8px', background: '#eff6ff', borderRadius: '6px', color: '#1e40af' }}>
+                                    <div style={{ display: 'flex', gap: '8px', padding: '10px 12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '10px', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                                         <Info size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                        <span>
+                                        <span style={{ fontWeight: '500' }}>
                                             {(selectedTask.budget_restant - total) >= 0
                                                 ? "Cette dépense sera automatiquement approuvée si elle respecte le solde."
                                                 : "Attention : Cette dépense dépasse le budget de la mission."}
@@ -183,7 +183,7 @@ export default function ExpenseForm() {
                     )}
 
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Motif / Objet de la dépense</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Motif / Objet de la dépense</label>
                         <input
                             type="text"
                             name="motif"
@@ -191,33 +191,33 @@ export default function ExpenseForm() {
                             placeholder="Ex: Achat de fournitures de bureau"
                             value={formData.motif}
                             onChange={handleChange}
-                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                         />
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Catégorie</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Catégorie</label>
                         <div style={{ position: 'relative' }}>
-                            <Tag size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <Tag size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                             <select
                                 name="categorie"
                                 value={formData.categorie}
                                 onChange={handleChange}
-                                style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white' }}
+                                style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                             >
-                                <option value="fonctionnement">Fonctionnement</option>
-                                <option value="investissement">Investissement</option>
-                                <option value="personnel">Personnel</option>
-                                <option value="formation">Formation</option>
-                                <option value="mission">Mission</option>
-                                <option value="autre">Autre</option>
+                                <option value="fonctionnement" style={{ background: 'var(--color-bg-card)' }}>Fonctionnement</option>
+                                <option value="investissement" style={{ background: 'var(--color-bg-card)' }}>Investissement</option>
+                                <option value="personnel" style={{ background: 'var(--color-bg-card)' }}>Personnel</option>
+                                <option value="formation" style={{ background: 'var(--color-bg-card)' }}>Formation</option>
+                                <option value="mission" style={{ background: 'var(--color-bg-card)' }}>Mission</option>
+                                <option value="autre" style={{ background: 'var(--color-bg-card)' }}>Autre</option>
                             </select>
                         </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Quantité</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Quantité</label>
                             <input
                                 type="number"
                                 name="quantite"
@@ -225,12 +225,12 @@ export default function ExpenseForm() {
                                 required
                                 value={formData.quantite}
                                 onChange={handleChange}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                             />
                         </div>
 
                         <div className={styles.formGroup}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Prix Unitaire (Ar)</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Prix Unitaire (Ar)</label>
                             <input
                                 type="number"
                                 name="prix_unitaire"
@@ -238,35 +238,35 @@ export default function ExpenseForm() {
                                 placeholder="0.00"
                                 value={formData.prix_unitaire}
                                 onChange={handleChange}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                             />
                         </div>
                     </div>
 
-                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                    <div style={{ background: 'var(--color-bg-hover)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)' }}>
                             <Calculator size={20} />
                             <span style={{ fontWeight: '500' }}>Total calculé :</span>
                         </div>
-                        <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>
                             {formatCurrency(total)}
                         </span>
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Justificatif (PDF, Image)</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Justificatif (PDF, Image)</label>
                         <div style={{ position: 'relative' }}>
-                            <Upload size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <Upload size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                             <input
                                 type="file"
                                 onChange={handleFileChange}
-                                style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.875rem' }}
+                                style={{ width: '100%', padding: '10px 12px 10px 40px', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '0.875rem', background: 'var(--color-bg-hover)', color: 'var(--color-text-muted)', outline: 'none' }}
                             />
                         </div>
                     </div>
 
                     <div className={styles.formGroup}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#334155' }}>Commentaire / Justification</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Commentaire / Justification</label>
                         <textarea
                             name="commentaire"
                             required
@@ -274,7 +274,7 @@ export default function ExpenseForm() {
                             value={formData.commentaire}
                             onChange={handleChange}
                             rows="3"
-                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', resize: 'vertical' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', resize: 'vertical', background: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', outline: 'none' }}
                         />
                     </div>
 

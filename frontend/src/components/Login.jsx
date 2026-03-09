@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, User, Lock, AlertCircle, Loader2, Building2, Shield, TrendingUp } from 'lucide-react';
+import { LogIn, User, Lock, AlertCircle, Loader2, Building2, Shield, TrendingUp, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -55,15 +57,15 @@ export default function Login() {
                                     </div>
 
                                     {/* Orbiting Elements */}
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl rotate-12 shadow-xl opacity-60 flex items-center justify-center animate-float">
-                                        <TrendingUp className="w-10 h-10 text-white/80" />
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl rotate-12 shadow-2xl opacity-80 flex items-center justify-center animate-float group">
+                                        <TrendingUp className="w-10 h-10 text-white" />
                                     </div>
 
-                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-700 to-blue-800 rounded-full shadow-xl opacity-50 animate-float-delayed"></div>
+                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full shadow-2xl opacity-70 animate-float-delayed"></div>
 
-                                    <div className="absolute bottom-8 right-0 w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl -rotate-12 shadow-xl opacity-55 animate-float"></div>
+                                    <div className="absolute bottom-8 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-2xl -rotate-12 shadow-2xl opacity-80 animate-float"></div>
 
-                                    <div className="absolute top-20 right-4 w-16 h-16 bg-gradient-to-br from-cyan-700 to-blue-800 rounded-xl rotate-45 shadow-xl opacity-60 animate-float-delayed"></div>
+                                    <div className="absolute top-20 right-4 w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl rotate-45 shadow-2xl opacity-80 animate-float-delayed"></div>
                                 </div>
                             </div>
 
@@ -79,18 +81,18 @@ export default function Login() {
                     </div>
 
                     {/* Footer Features */}
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-3 gap-6 font-sans">
                         <div className="text-center">
-                            <div className="text-2xl font-bold mb-1">100%</div>
-                            <div className="text-slate-400 text-sm">Sécurisé</div>
+                            <div className="text-3xl font-black mb-1 text-white tracking-tighter">100%</div>
+                            <div className="text-blue-200/60 text-[10px] uppercase font-bold tracking-widest">Sécurisé</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl font-bold mb-1">24/7</div>
-                            <div className="text-slate-400 text-sm">Disponible</div>
+                            <div className="text-3xl font-black mb-1 text-white tracking-tighter">24/7</div>
+                            <div className="text-blue-200/60 text-[10px] uppercase font-bold tracking-widest">Disponible</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl font-bold mb-1">5+</div>
-                            <div className="text-slate-400 text-sm">Modules</div>
+                            <div className="text-3xl font-black mb-1 text-white tracking-tighter">5+</div>
+                            <div className="text-blue-200/60 text-[10px] uppercase font-bold tracking-widest">Modules</div>
                         </div>
                     </div>
                 </div>
@@ -133,7 +135,7 @@ export default function Login() {
                                     <input
                                         type="text"
                                         placeholder="Entrez votre identifiant"
-                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white outline-none transition-all text-slate-900 placeholder:text-slate-400"
+                                        className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-slate-900 placeholder:text-slate-400 shadow-sm"
                                         value={username}
                                         onChange={e => setUsername(e.target.value)}
                                         required
@@ -151,14 +153,44 @@ export default function Login() {
                                         <Lock size={20} />
                                     </div>
                                     <input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="••••••••••"
-                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:bg-white outline-none transition-all text-slate-900"
+                                        className="w-full pl-12 pr-12 py-3.5 bg-white border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-slate-900 shadow-sm"
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
                                         required
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    </button>
                                 </div>
+                                <div className="flex justify-end mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => alert("Veuillez contacter l'administrateur système pour réinitialiser votre mot de passe.")}
+                                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline underline-offset-4 transition-all"
+                                    >
+                                        Mot de passe oublié ?
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={e => setRememberMe(e.target.checked)}
+                                        className="w-5 h-5 rounded-lg border-2 border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                                    />
+                                    <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">
+                                        Se souvenir de moi
+                                    </span>
+                                </label>
                             </div>
 
                             <button
@@ -190,12 +222,12 @@ export default function Login() {
                     {/* Admin Link */}
                     <div className="mt-6 text-center">
                         <a
-                            href="/admin/"
+                            href={process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL.replace(/\/api\/?$/, '')}/admin/` : "http://localhost:8000/admin/"}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-slate-500 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+                            className="text-sm font-semibold text-slate-500 hover:text-blue-600 hover:underline underline-offset-4 transition-all inline-flex items-center gap-2 group"
                         >
-                            <Shield size={16} />
+                            <Shield size={16} className="group-hover:animate-pulse" />
                             Espace d'Administration
                         </a>
                     </div>

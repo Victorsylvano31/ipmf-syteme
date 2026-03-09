@@ -23,6 +23,7 @@ import AuditStats from './components/Audit/AuditStats';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
 import NotificationsPage from './pages/NotificationsPage';
+import AssistantChat from './components/AI/AssistantChat';
 
 const MainLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -45,6 +46,9 @@ const MainLayout = () => {
                     </div>
                 </main>
             </div>
+
+            {/* Assistant Intelligent Stratégique */}
+            <AssistantChat />
         </div>
     );
 };

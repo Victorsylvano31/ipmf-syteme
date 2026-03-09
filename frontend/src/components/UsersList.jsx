@@ -155,22 +155,32 @@ export default function UsersList() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-bold text-[var(--color-text-primary)] tracking-tight">Utilisateurs</h1>
-                    <p className="text-[var(--color-text-muted)] font-medium">{users.length} membres enregistrés dans le système</p>
+            {/* Premium Strategic Banner (Version Slim) */}
+            <div className="relative overflow-hidden rounded-[24px] bg-slate-950 bg-mesh-slate p-6 lg:p-8 shadow-xl animate-slide-up border border-white/10 mb-8">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+
+                <div className="absolute top-0 right-0 p-4 z-20 flex flex-wrap gap-3 justify-end items-center">
+                    {isAdminOrDG && (
+                        <Button
+                            onClick={() => setShowCreateModal(true)}
+                            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md rounded-full px-6 py-2 h-9 border border-white/10 font-black text-[10px] uppercase tracking-widest group shadow-xl transition-all"
+                        >
+                            <Plus size={16} className="mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                            <span>Nouveau</span>
+                        </Button>
+                    )}
                 </div>
-                {isAdminOrDG && (
-                    <Button
-                        onClick={() => setShowCreateModal(true)}
-                        icon={Plus}
-                        size="lg"
-                        className="shadow-blue-500/20"
-                    >
-                        Nouveau Collaborateur
-                    </Button>
-                )}
+
+                <header className="relative z-10 flex items-center gap-6">
+                    <div className="space-y-1">
+                        <Badge variant="outline" className="bg-indigo-500/20 text-indigo-200 border-indigo-400/30 backdrop-blur-xl px-2 py-0.5 font-black tracking-[0.1em] uppercase text-[9px] w-fit">
+                            ADMINISTRATION
+                        </Badge>
+                        <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                            Gestion des <span className="text-indigo-200">Utilisateurs</span>
+                        </h1>
+                    </div>
+                </header>
             </div>
 
             {/* Stats Overview */}

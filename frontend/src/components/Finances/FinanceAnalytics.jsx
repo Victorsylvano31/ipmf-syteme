@@ -46,11 +46,34 @@ export default function FinanceAnalytics() {
             const response = await api.get('finances/analytics/', {
                 params: { granularity }
             });
-            setData(response.data.data);
+
+            let rawData = response.data.data;
+
+            // 1. Zoom Temporel : Filtrer les périodes de début sans activité
+            const firstActiveIndex = rawData.findIndex(item => item.entrees > 0 || item.depenses > 0);
+            const processedData = firstActiveIndex !== -1 ? rawData.slice(firstActiveIndex) : rawData;
+
+            setData(processedData);
+
+            // 2. Calcul des Tendances (Trends)
+            // On compare la dernière période "réelle" à la précédente
+            const realData = processedData.filter(item => !item.is_forecast);
+            let trends = { entrees: 0, depenses: 0 };
+
+            if (realData.length >= 2) {
+                const current = realData[realData.length - 1];
+                const previous = realData[realData.length - 2];
+
+                const calcTrend = (curr, prev) => prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+                trends.entrees = calcTrend(current.entrees, previous.entrees);
+                trends.depenses = calcTrend(current.depenses, previous.depenses);
+            }
+
             setStats({
                 totalEntrees: response.data.overall_totals.total_entrees,
                 totalDepenses: response.data.overall_totals.total_depenses,
-                lastSolde: response.data.overall_totals.solde
+                lastSolde: response.data.overall_totals.solde,
+                trends
             });
             setLoading(false);
         } catch (err) {
@@ -68,12 +91,44 @@ export default function FinanceAnalytics() {
         fetchData();
     }, [fetchData]);
 
+    const formatChartDate = (label) => {
+        if (!label || typeof label !== 'string') return label;
+
+        try {
+            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+            // Format ISO YYYY-MM ou YYYY-MM-DD
+            const isoMatch = label.match(/^(\d{4})-(\d{1,2})/);
+            if (isoMatch) {
+                const year = isoMatch[1];
+                const monthIdx = parseInt(isoMatch[2], 10) - 1;
+                if (monthIdx >= 0 && monthIdx < 12) {
+                    return `${months[monthIdx]} ${year.slice(2)}`;
+                }
+            }
+
+            // Format Français DD-MM-YYYY ou DD/MM/YYYY
+            const frMatch = label.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (frMatch) {
+                const year = frMatch[3];
+                const monthIdx = parseInt(frMatch[2], 10) - 1;
+                if (monthIdx >= 0 && monthIdx < 12) {
+                    return `${months[monthIdx]} ${year.slice(2)}`;
+                }
+            }
+        } catch (err) {
+            console.error("Format error:", err);
+        }
+
+        return label;
+    };
+
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             const isForecast = payload[0].payload.is_forecast;
             return (
                 <div className="bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border)] shadow-xl backdrop-blur-md">
-                    <p className="font-bold text-[var(--color-text-primary)] mb-2">{label} {isForecast ? '(Prévision)' : ''}</p>
+                    <p className="font-bold text-[var(--color-text-primary)] mb-2">{formatChartDate(label)} {isForecast ? '(Prévision)' : ''}</p>
                     <div className="space-y-1">
                         {payload.map((entry, index) => (
                             <div key={index} className="flex items-center justify-between gap-4 text-xs font-medium">
@@ -115,42 +170,55 @@ export default function FinanceAnalytics() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate('/finances')}
-                        className="w-10 h-10 p-0 rounded-full no-print"
-                    >
-                        <ArrowLeft size={18} />
-                    </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold text-[var(--color-text-primary)] tracking-tight">Analyses Financières</h1>
-                        <p className="text-[var(--color-text-muted)] font-medium">Tendances, flux de trésorerie et prévisions</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 no-print overflow-x-auto pb-2 md:pb-0">
-                    <div className="bg-[var(--color-bg-hover)] p-1 rounded-xl flex gap-1 border border-[var(--color-border-light)]">
+            {/* Premium Strategic Banner (Version Slim) */}
+            <div className="relative overflow-hidden rounded-[24px] bg-slate-950 bg-mesh-slate p-6 lg:p-8 shadow-xl animate-slide-up border border-white/10">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+
+                <div className="absolute top-0 right-0 p-4 z-20 flex flex-wrap gap-2 justify-end items-center no-print">
+                    <div className="bg-white/10 backdrop-blur-xl p-1 rounded-xl flex gap-1 border border-white/10">
                         {['day', 'week', 'month', 'year'].map((g) => (
                             <button
                                 key={g}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${granularity === g
-                                    ? 'bg-[var(--color-bg-card)] text-blue-600 shadow-sm'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${granularity === g
+                                    ? 'bg-white text-blue-600 shadow-lg'
+                                    : 'text-white/60 hover:text-white hover:bg-white/5'
                                     }`}
                                 onClick={() => setGranularity(g)}
                             >
-                                {g === 'day' ? 'Jours' : g === 'week' ? 'Semaines' : g === 'month' ? 'Mois' : 'Années'}
+                                {g === 'day' ? 'J' : g === 'week' ? 'S' : g === 'month' ? 'M' : 'A'}
                             </button>
                         ))}
                     </div>
-                    <Button variant="secondary" onClick={handleExport} className="gap-2 shrink-0">
-                        <Download size={18} />
-                        <span>Exporter PDF</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleExport}
+                        className="text-white bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full px-4 border border-white/10 font-bold h-9 transition-all text-[11px]"
+                    >
+                        <Download size={14} className="mr-2" />
+                        <span>Exporter</span>
                     </Button>
                 </div>
-            </header>
+
+                <header className="relative z-10 flex items-center gap-6">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate('/finances')}
+                        className="w-10 h-10 p-0 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-xl no-print flex-shrink-0"
+                    >
+                        <ArrowLeft size={20} />
+                    </Button>
+                    <div className="space-y-1">
+                        <Badge variant="outline" className="bg-blue-500/20 text-blue-200 border-blue-400/30 backdrop-blur-xl px-2 py-0.5 font-black tracking-[0.1em] uppercase text-[9px] w-fit">
+                            ANALYTIQUES
+                        </Badge>
+                        <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                            Analyses <span className="text-blue-200">Financières</span>
+                        </h1>
+                    </div>
+                </header>
+            </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -159,9 +227,16 @@ export default function FinanceAnalytics() {
                         <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl">
                             <ArrowUpCircle size={28} />
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Total Entrées</p>
-                            <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalEntrees)}</h3>
+                            <div className="flex items-baseline justify-between">
+                                <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalEntrees)}</h3>
+                                {stats.trends?.entrees !== 0 && (
+                                    <span className={`text-[10px] font-black ${stats.trends?.entrees > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        {stats.trends?.entrees > 0 ? '↑' : '↓'} {Math.abs(stats.trends?.entrees || 0).toFixed(1)}%
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -170,9 +245,16 @@ export default function FinanceAnalytics() {
                         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-2xl">
                             <ArrowDownCircle size={28} />
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Total Dépenses</p>
-                            <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalDepenses)}</h3>
+                            <div className="flex items-baseline justify-between">
+                                <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalDepenses)}</h3>
+                                {stats.trends?.depenses !== 0 && (
+                                    <span className={`text-[10px] font-black ${stats.trends?.depenses < 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        {stats.trends?.depenses > 0 ? '↑' : '↓'} {Math.abs(stats.trends?.depenses || 0).toFixed(1)}%
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -236,6 +318,7 @@ export default function FinanceAnalytics() {
                                 tickLine={false}
                                 axisLine={false}
                                 dy={15}
+                                tickFormatter={formatChartDate}
                             />
                             <YAxis
                                 stroke="var(--color-text-muted)"
@@ -243,7 +326,7 @@ export default function FinanceAnalytics() {
                                 fontWeight={600}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `${value / 1000}k`}
+                                tickFormatter={(value) => value === 0 ? '0' : `${(value / 1000000).toFixed(1)} M`}
                             />
                             <Tooltip
                                 content={<CustomTooltip />}
@@ -262,7 +345,7 @@ export default function FinanceAnalytics() {
                                         <Cell
                                             key={`cell-e-${index}`}
                                             fill="#10b981"
-                                            fillOpacity={entry.is_ongoing ? 0.3 : 0.8}
+                                            fillOpacity={entry.is_ongoing || entry.is_forecast ? 0.3 : 0.8}
                                             stroke={entry.is_ongoing ? "#10b981" : "none"}
                                             strokeDasharray={entry.is_ongoing ? "3 3" : "0"}
                                         />
@@ -281,7 +364,7 @@ export default function FinanceAnalytics() {
                                         <Cell
                                             key={`cell-d-${index}`}
                                             fill="#ef4444"
-                                            fillOpacity={entry.is_ongoing ? 0.3 : 0.8}
+                                            fillOpacity={entry.is_ongoing || entry.is_forecast ? 0.3 : 0.8}
                                             stroke={entry.is_ongoing ? "#ef4444" : "none"}
                                             strokeDasharray={entry.is_ongoing ? "3 3" : "0"}
                                         />
@@ -308,8 +391,7 @@ export default function FinanceAnalytics() {
                                     dataKey="entrees_prevues"
                                     fill="#10b981"
                                     fillOpacity={0.2}
-                                    stroke="#10b981"
-                                    strokeDasharray="4 4"
+                                    stroke="none"
                                     barSize={14}
                                 />
                             )}
@@ -319,8 +401,7 @@ export default function FinanceAnalytics() {
                                     dataKey="depenses_prevues"
                                     fill="#ef4444"
                                     fillOpacity={0.2}
-                                    stroke="#ef4444"
-                                    strokeDasharray="4 4"
+                                    stroke="none"
                                     barSize={14}
                                 />
                             )}
@@ -369,7 +450,7 @@ export default function FinanceAnalytics() {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2 font-bold text-[var(--color-text-primary)]">
                                                     <Calendar size={14} className="text-blue-500" />
-                                                    {row.label}
+                                                    {formatChartDate(row.label)}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">
@@ -400,7 +481,7 @@ export default function FinanceAnalytics() {
                     </div>
                 </Card>
             </div>
-        </div>
+        </div >
     );
 }
 

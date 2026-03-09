@@ -11,6 +11,7 @@ IPMF Systeme est une application de gestion complète comprenant un backend robu
 - **Audit et Logs** : Historique des actions effectuées sur le système.
 - **Notifications** : Système d'alertes en temps réel.
 
+
 ## Stack Technique
 
 ### Backend
