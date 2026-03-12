@@ -1,4 +1,9 @@
 # IPMF SYSTEME
+<img width="1919" height="1079" alt="Capture d&#39;écran 2026-03-13 021259" src="https://github.com/user-attachments/assets/7f88b001-1f42-4584-94e2-0979a357c3dc" />
+<img width="1919" height="1079" alt="Capture d&#39;écran 2026-03-13 021500" src="https://github.com/user-attachments/assets/4dad941c-99de-471a-a083-c2b27cc3e1ce" />
+<img width="1919" height="935" alt="image" src="https://github.com/user-attachments/assets/c0682786-0db6-437a-a27e-bf2666d634f7" />
+
+
 https://youtu.be/BVzPP3j9gMU
 
 IPMF Systeme est une application de gestion complète comprenant un backend robuste en Django et un frontend moderne en React.
