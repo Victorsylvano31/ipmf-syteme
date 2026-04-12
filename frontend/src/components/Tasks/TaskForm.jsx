@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/axios';
-import { Calendar, AlertTriangle, User, CreditCard, Send, PlusCircle, Search, X } from 'lucide-react';
+import { Calendar, AlertTriangle, User, CreditCard, Send, PlusCircle, X, Edit2, Save } from 'lucide-react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import Button from '../ui/Button';
@@ -9,10 +9,12 @@ import Input from '../ui/Input';
 import Avatar from '../ui/Avatar';
 
 export default function TaskForm() {
+    const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { addToast } = useNotifications();
     const queryParams = new URLSearchParams(location.search);
+    const isEdit = Boolean(id);
 
     // Helper to format ISO or Date for datetime-local input (YYYY-MM-DDTHH:mm)
     const formatDateForInput = (dateStr) => {
@@ -37,19 +39,17 @@ export default function TaskForm() {
         date_debut: formatDateForInput(queryParams.get('start')),
         date_echeance: formatDateForInput(queryParams.get('end')),
         priorite: 'moyenne',
-        agents_assignes: [],
+        agent_principal: '',
         budget_alloue: ''
     });
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showResults, setShowResults] = useState(false);
 
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await api.get('users/');
+                const res = await api.get('users/?page_size=100');
                 const data = res.data.results || res.data;
                 const usersData = Array.isArray(data) ? data : [];
                 setUsers(usersData);
@@ -57,40 +57,62 @@ export default function TaskForm() {
                 console.error("Erreur chargement utilisateurs", err);
             }
         };
+
+        const fetchTask = async () => {
+            if (!isEdit) return;
+            setLoading(true);
+            try {
+                const res = await api.get(`tasks/taches/${id}/`);
+                const task = res.data;
+                setFormData({
+                    titre: task.titre || '',
+                    description: task.description || '',
+                    date_debut: formatDateForInput(task.date_debut),
+                    date_echeance: formatDateForInput(task.date_echeance),
+                    priorite: task.priorite || 'moyenne',
+                    agent_principal: task.agent_principal || '',
+                    budget_alloue: task.budget_alloue || ''
+                });
+            } catch (err) {
+                console.error("Erreur chargement mission", err);
+                setError("Impossible de charger les données de la mission.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchUsers();
-    }, []);
+        fetchTask();
+    }, [id, isEdit]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
 
-    const toggleUser = (userId) => {
-        const current = [...formData.agents_assignes];
-        const index = current.indexOf(userId);
-        if (index > -1) {
-            current.splice(index, 1);
-        } else {
-            current.push(userId);
-        }
-        setFormData({ ...formData, agents_assignes: current });
-    };
-
-    const getSelectedUsers = () => {
-        return users.filter(u => formData.agents_assignes.includes(u.id));
-    };
+    // Filtrer pour exclure le DG et admin du dropdown Chef de mission
+    const chefCandidates = users.filter(u => !['dg', 'admin'].includes(u.role));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
-        const payload = { ...formData };
+        const payload = {
+            ...formData,
+            agent_principal: formData.agent_principal || null,
+            agents_assignes: formData.agent_principal ? [parseInt(formData.agent_principal)] : []
+        };
 
         try {
-            await api.post('tasks/taches/', payload);
-            addToast("La mission a été créée avec succès", "success", "Succès");
-            navigate('/tasks');
+            if (isEdit) {
+                await api.patch(`tasks/taches/${id}/`, payload);
+                addToast("La mission a été mise à jour avec succès", "success", "Succès");
+            } else {
+                await api.post('tasks/taches/', payload);
+                addToast("La mission a été créée avec succès", "success", "Succès");
+            }
+            navigate(isEdit ? `/tasks/${id}` : '/tasks');
         } catch (err) {
             console.error(err);
             const errorData = err.response?.data;
@@ -131,10 +153,15 @@ export default function TaskForm() {
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                        <PlusCircle size={24} className="text-blue-500" />
-                        Nouvelle Mission
+                        {isEdit ? (
+                            <><Edit2 size={24} className="text-blue-500" /> Modifier la Mission</>
+                        ) : (
+                            <><PlusCircle size={24} className="text-blue-500" /> Nouvelle Mission</>
+                        )}
                     </h1>
-                    <p className="text-sm text-slate-500 font-medium">Définissez les détails et assignez des agents.</p>
+                    <p className="text-sm text-slate-500 font-medium">
+                        {isEdit ? "Modifiez les détails de cette mission." : "Définissez les détails et assignez des agents."}
+                    </p>
                 </div>
             </div>
 
@@ -230,121 +257,47 @@ export default function TaskForm() {
                             </div>
                         </div>
 
-                        {/* Section 3: Assignment */}
+                        {/* Section 3: Chef de Mission */}
                         <div className="space-y-6 pt-6 border-t border-slate-100">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                    <User size={16} className="text-blue-500" /> Assignation des agents
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                    <User size={16} className="text-blue-500" /> Chef de mission
                                 </label>
-                                <p className="text-[10px] font-bold text-slate-400 italic">Maintenez Ctrl/Cmd pour sélections multiples</p>
-                            </div>
-
-                            <div className="space-y-4">
-                                {/* Chips for selected users */}
-                                <div className="flex flex-wrap gap-2">
-                                    {getSelectedUsers().map(u => (
-                                        <div key={u.id} className="flex items-center gap-2 pr-3 pl-1 py-1 bg-blue-50/50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900/30 animate-in zoom-in-95 duration-200">
-                                            <Avatar
-                                                src={u.photo_url}
-                                                name={u.full_name || u.username}
-                                                size="xs"
-                                                className="bg-[var(--color-bg-hover)] dark:bg-slate-800"
-                                            />
-                                            <span className="text-xs font-bold">{u.full_name || u.username}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleUser(u.id)}
-                                                className="p-0.5 hover:bg-blue-200 rounded-full transition-colors"
-                                            >
-                                                <X size={12} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {formData.agents_assignes.length === 0 && (
-                                        <p className="text-sm text-slate-400 italic">Aucun agent sélectionné</p>
-                                    )}
+                                <p className="text-[10px] font-medium text-slate-400 mb-4">Le Chef sélectionné pourra ensuite constituer son équipe depuis la page de la mission.</p>
+                                <div className="relative group">
+                                    <select
+                                        name="agent_principal"
+                                        value={formData.agent_principal}
+                                        onChange={handleChange}
+                                        required
+                                        className="w-full px-4 h-12 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-100/50 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-900 appearance-none cursor-pointer"
+                                    >
+                                        <option value="">— Sélectionner un Chef de mission —</option>
+                                        {chefCandidates.map(u => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.full_name || u.username} ({u.role_display || u.role})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                    </div>
                                 </div>
 
-                                {/* Search and results */}
-                                <div className="relative">
-                                    <div className="relative group">
-                                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors z-10" />
-                                        <Input
-                                            placeholder="Rechercher un agent par nom ou rôle..."
-                                            value={searchTerm}
-                                            onChange={(e) => {
-                                                setSearchTerm(e.target.value);
-                                                setShowResults(true);
-                                            }}
-                                            onFocus={() => setShowResults(true)}
-                                            className="pl-12 bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700/50"
-                                        />
-                                    </div>
-
-                                    {showResults && searchTerm && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                                            <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                                                {users.filter(u => {
-                                                    const search = searchTerm.toLowerCase().trim();
-                                                    const fullName = (u.full_name || '').toLowerCase();
-                                                    const username = (u.username || '').toLowerCase();
-                                                    const roleDisplay = (u.role_display || u.role || '').toLowerCase();
-                                                    return (fullName.includes(search) || username.includes(search) || roleDisplay.includes(search)) &&
-                                                        !formData.agents_assignes.includes(u.id);
-                                                }).length > 0 ? (
-                                                    users.filter(u => {
-                                                        const search = searchTerm.toLowerCase().trim();
-                                                        const fullName = (u.full_name || '').toLowerCase();
-                                                        const username = (u.username || '').toLowerCase();
-                                                        const roleDisplay = (u.role_display || u.role || '').toLowerCase();
-                                                        return (fullName.includes(search) || username.includes(search) || roleDisplay.includes(search)) &&
-                                                            !formData.agents_assignes.includes(u.id);
-                                                    }).map(u => (
-                                                        <div
-                                                            key={u.id}
-                                                            onClick={() => {
-                                                                toggleUser(u.id);
-                                                                setSearchTerm('');
-                                                                setShowResults(false);
-                                                            }}
-                                                            className={`
-                                                                flex items-center gap-3 p-3 cursor-pointer transition-all border-b border-[var(--color-border-light)] last:border-0
-                                                                ${formData.agents_assignes.includes(u.id)
-                                                                    ? 'bg-blue-500/10 dark:bg-blue-500/20'
-                                                                    : 'hover:bg-[var(--color-bg-hover)]'
-                                                                }
-                                                            `}
-                                                        >
-                                                            <Avatar
-                                                                src={u.photo_url}
-                                                                name={u.full_name || u.username}
-                                                                size="base"
-                                                                className="bg-[var(--color-bg-hover)] dark:bg-slate-800"
-                                                            />
-                                                            <div className="flex-1">
-                                                                <p className="text-sm font-bold text-[var(--color-text-primary)]">{u.full_name || u.username}</p>
-                                                                <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">{u.role}</p>
-                                                            </div>
-                                                            <PlusCircle size={16} className="text-slate-300" />
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <div className="p-8 text-center">
-                                                        <p className="text-sm text-slate-400 font-medium italic">Aucun agent trouvé</p>
-                                                    </div>
-                                                )}
+                                {/* Preview of selected Chef */}
+                                {formData.agent_principal && (() => {
+                                    const chef = users.find(u => u.id === parseInt(formData.agent_principal));
+                                    if (!chef) return null;
+                                    return (
+                                        <div className="mt-4 flex items-center gap-3 p-3 bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
+                                            <Avatar name={chef.full_name || chef.username} size="base" />
+                                            <div>
+                                                <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{chef.full_name || chef.username}</p>
+                                                <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest">{chef.role_display || chef.role} — Chef de mission</p>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Close search results on click outside (simplified for now) */}
-                                    {showResults && (
-                                        <div
-                                            className="fixed inset-0 z-40"
-                                            onClick={() => setShowResults(false)}
-                                        />
-                                    )}
-                                </div>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -353,15 +306,17 @@ export default function TaskForm() {
                             <div className="max-w-xs space-y-2">
                                 <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest flex items-center gap-2">
                                     <CreditCard size={16} className="text-emerald-500" /> Budget alloué (Ar)
+                                    <span className="text-[9px] font-medium text-slate-400 normal-case tracking-normal">(Optionnel — peut être défini après)</span>
                                 </label>
                                 <Input
                                     type="number"
                                     name="budget_alloue"
-                                    placeholder="Ex: 500000"
+                                    placeholder="Ex: 500000 — ou laisser vide"
                                     value={formData.budget_alloue}
                                     onChange={handleChange}
                                     className="font-mono font-bold text-lg bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/10"
                                 />
+                                <p className="text-[10px] text-slate-400 font-medium">💡 Vous pouvez remplir le Bon de Commande dans la page de la mission et synchroniser le budget automatiquement.</p>
                             </div>
                         </div>
                     </CardContent>
@@ -378,10 +333,10 @@ export default function TaskForm() {
                         <Button
                             type="submit"
                             disabled={loading}
-                            icon={Send}
+                            icon={isEdit ? Save : Send}
                             className="px-10 h-12 shadow-xl shadow-blue-500/20"
                         >
-                            {loading ? 'Création en cours...' : 'Créer la mission'}
+                            {loading ? (isEdit ? 'Mise à jour...' : 'Création en cours...') : (isEdit ? 'Enregistrer les modifications' : 'Créer la mission')}
                         </Button>
                     </div>
                 </Card>

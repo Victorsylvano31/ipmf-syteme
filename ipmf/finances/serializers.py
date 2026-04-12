@@ -76,6 +76,7 @@ class DepenseSerializer(serializers.ModelSerializer):
     
     valide_par_comptable_name = serializers.CharField(source='valide_par_comptable.get_full_name', read_only=True)
     valide_par_dg_name = serializers.CharField(source='valide_par_dg.get_full_name', read_only=True)
+    verifie_par_name = serializers.CharField(source='verifie_par.get_full_name', read_only=True)
     
     class Meta:
         model = Depense
@@ -84,8 +85,9 @@ class DepenseSerializer(serializers.ModelSerializer):
             'quantite', 'prix_unitaire', 'created_by', 'created_by_name', 'created_at', 'statut', 'statut_display',
             'piece_justificative', 'piece_justificative_name', 'commentaire', 'necessite_validation_dg',
             'delai_attente', 'est_en_retard', 'can_verify', 'can_validate', 'can_pay', 'can_reject',
-            'valide_par_comptable', 'valide_par_comptable_name', 'valide_par_dg', 'valide_par_dg_name',
-            'date_validation_comptable', 'date_validation_dg', 'commentaire_validation',
+            'verifie_par', 'verifie_par_name', 'valide_par_comptable', 'valide_par_comptable_name', 
+            'valide_par_dg', 'valide_par_dg_name', 'date_verification', 'date_validation_comptable', 
+            'date_validation_dg', 'date_paiement', 'commentaire_validation',
             'tache', 'tache_titre', 'tache_budget', 'approved_by_system'
         ]
         read_only_fields = (

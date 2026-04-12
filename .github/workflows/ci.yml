@@ -46,12 +46,3 @@ jobs:
       run: |
         cd frontend
         npm run build --if-present
-
-  docker-build:
-    needs: [test-backend, test-frontend]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Test Docker Compose Build
-      run: docker-compose build

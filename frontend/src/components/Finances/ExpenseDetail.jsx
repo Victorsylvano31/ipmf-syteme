@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
     ShieldCheck,
@@ -20,6 +20,7 @@ import styles from './Finances.module.css';
 export default function ExpenseDetail() {
     const { user } = useAuth();
     const { id } = useParams();
+    const navigate = useNavigate();
     const [expense, setExpense] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -55,7 +56,7 @@ export default function ExpenseDetail() {
                 'reject': 'reject' // Wait, does the backend have reject?
             };
             const urlAction = actionMapping[action] || action;
-            await api.post(`finances/depenses/${id}/${urlAction}/`, { comment });
+            await api.post(`finances/depenses/${id}/${urlAction}/`, { commentaire: comment });
             await fetchExpense();
             setComment('');
         } catch (err) {
@@ -74,7 +75,8 @@ export default function ExpenseDetail() {
     const isComptable = ['admin', 'comptable'].includes(role);
     const isDG = ['admin', 'dg'].includes(role);
     const isCaisse = ['admin', 'caisse'].includes(role);
-    const isCreator = user && expense && user.id === expense.created_by;
+    const isPayer = ['admin', 'caisse', 'dg'].includes(role);
+    const isCreator = user && expense && user.id === expense.created_by && user.role !== 'dg';
 
     return (
         <div className={styles.financeContainer}>
@@ -104,8 +106,15 @@ export default function ExpenseDetail() {
                                 <label style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Motif / Objet</label>
                                 <h2 style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', marginTop: '4px' }}>{expense.motif}</h2>
                                 {expense.tache_titre && (
-                                    <div style={{ marginTop: '12px', padding: '10px 14px', background: 'var(--color-bg-hover)', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}>
-                                        <label style={{ fontSize: '0.65rem', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Mission & Budget DG</label>
+                                    <div 
+                                        onClick={() => navigate(`/tasks/${expense.tache}`)}
+                                        className="cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        style={{ marginTop: '12px', padding: '10px 14px', background: 'var(--color-bg-hover)', borderRadius: '12px', border: '1px solid var(--color-border-light)' }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer' }}>Mission liée</label>
+                                            <span style={{ fontSize: '0.65rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>Voir détails →</span>
+                                        </div>
                                         <p style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>{expense.tache_titre}</p>
                                         <p style={{ fontSize: '0.8125rem', color: '#6366f1', fontWeight: '600', marginTop: '2px' }}>Budget Alloué : {formatCurrency(expense.tache_budget)}</p>
                                     </div>
@@ -212,10 +221,27 @@ export default function ExpenseDetail() {
                                 )
                             )}
 
-                            {/* Pay (Caisse or Admin) - HIDE IF CREATOR */}
-                            {expense.statut === 'validee' && isCaisse && !isCreator && (
+                            {/* Pay (Caisse, DG or Admin) - HIDE IF CREATOR */}
+                            {expense.statut === 'validee' && isPayer && !isCreator && (
                                 <button onClick={() => handleAction('pay')} disabled={actionLoading} className={styles.btnPrimary} style={{ width: '100%', background: '#059669' }}>
                                     <CreditCard size={18} /> Confirmer le Paiement
+                                </button>
+                            )}
+
+                            {/* Valider et Payer Direct (DG Shortcut) - SI BUDGET DÉPASSÉ OU DG VEUT ALLER VITE */}
+                            {['en_attente', 'verifiee'].includes(expense.statut) && isDG && !isCreator && (
+                                <button 
+                                    onClick={() => handleAction('payer_direct')} 
+                                    disabled={actionLoading} 
+                                    className={styles.btnPrimary} 
+                                    style={{ 
+                                        width: '100%', 
+                                        background: expense.montant > expense.tache_budget ? '#dc2626' : '#10b981',
+                                        boxShadow: expense.montant > expense.tache_budget ? '0 0 15px rgba(220, 38, 38, 0.3)' : 'none',
+                                        border: 'none'
+                                    }}
+                                >
+                                    <CreditCard size={18} /> Valider et Payer (Direct)
                                 </button>
                             )}
 

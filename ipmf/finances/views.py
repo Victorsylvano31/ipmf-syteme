@@ -42,16 +42,26 @@ class EntreeArgentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = EntreeArgent.objects.all().select_related('created_by')
-        
-        if user.role in ['admin', 'comptable', 'caisse', 'dg']:
-            return queryset
-        else:
-            # Les autres utilisateurs ne voient que les entrÃ©es confirmÃ©es
-            return queryset.filter(statut='confirmee')
+        return EntreeArgent.objects.pour_utilisateur(user).select_related('created_by')
     
     def perform_create(self, serializer):
-        entree = serializer.save(created_by=self.request.user)
+        user = self.request.user
+        entree = serializer.save(created_by=user)
+        
+        # Auto-confirmation logic
+        should_auto_confirm = False
+        if user.role in ['admin', 'dg']:
+            should_auto_confirm = True
+        elif user.role == 'caisse' and entree.montant < 100000: # Explicit check to match the model logic
+            should_auto_confirm = True
+            
+        if should_auto_confirm:
+            try:
+                # Use FinanceService to ensure audit logs and correct business rules
+                FinanceService.confirm_entree(entree, user)
+            except Exception as e:
+                print(f"Auto-confirmation failed: {e}")
+
         AuditLog.log_action(
             action_type='create',
             module='finances',
@@ -405,17 +415,19 @@ class DepenseViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Depense.objects.all().select_related('created_by', 'verifie_par', 'valide_par_comptable', 'valide_par_dg')
-        
-        if user.role in ['admin', 'comptable', 'dg']:
-            return queryset
-        elif user.role == 'caisse':
-            return queryset.filter(statut__in=['validee', 'payee'])
-        else:
-            # Les agents voient seulement leurs propres dÃ©penses
-            return queryset.filter(created_by=user)
+        return Depense.objects.pour_utilisateur(user).select_related(
+            'created_by', 'verifie_par', 'valide_par_comptable', 'valide_par_dg'
+        )
     
     def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+        
+        # Validation : Seuls l'admin, le DG ou le Chef de mission peuvent demander des fonds pour une mission
+        tache = serializer.validated_data.get('tache')
+        if tache and self.request.user.role not in ['admin', 'dg']:
+            if tache.agent_principal != self.request.user:
+                raise PermissionDenied("Seul le Chef de mission peut demander des fonds pour cette mission.")
+                
         depense = serializer.save(created_by=self.request.user)
         
         # 1. DG Auto-Validation (Haute Priorité)
@@ -500,6 +512,27 @@ class DepenseViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response(DepenseSerializer(depense).data)
+
+    @action(detail=True, methods=['post'])
+    def payer_direct(self, request, pk=None):
+        """Action 'Express' pour DG : Valide et Paye en une seule fois"""
+        depense = self.get_object()
+        serializer = DepenseActionSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            FinanceService.approve_and_pay_depense(
+                depense, 
+                request.user, 
+                serializer.validated_data.get('commentaire', '')
+            )
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(DepenseSerializer(depense).data)
+
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):

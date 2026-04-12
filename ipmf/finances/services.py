@@ -23,7 +23,7 @@ class FinanceService:
             objet_type=obj.__class__.__name__,
             objet_id=str(obj.pk),
             objet_repr=str(obj),
-            nouvelles_valeurs=details or {},
+            differences=details or {},
             niveau='info'
         )
 
@@ -50,7 +50,12 @@ class FinanceService:
             message=f"Entrée {entree.numero} confirmée par {user.username}",
             user=user,
             obj=entree,
-            details={'old_statut': ancienne_valeur, 'new_statut': entree.statut}
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': entree.statut},
+                'Montant': {'old': '', 'new': f"{float(entree.montant):,.0f} Ar"},
+                'Motif': {'old': '', 'new': entree.motif},
+                'Mode Paiement': {'old': '', 'new': entree.get_mode_paiement_display()}
+            }
         )
         return entree
 
@@ -74,7 +79,11 @@ class FinanceService:
             message=f"Entrée {entree.numero} annulée par {user.username}",
             user=user,
             obj=entree,
-            details={'old_statut': ancienne_valeur, 'raison': comment}
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': entree.statut},
+                'Raison Annulation': {'old': '', 'new': comment},
+                'Montant': {'old': '', 'new': f"{float(entree.montant):,.0f} Ar"}
+            }
         )
         return entree
 
@@ -112,7 +121,11 @@ class FinanceService:
                         message=f"Dépense {depense.numero} auto-validée via Mission {tache.numero}",
                         user=user,
                         obj=depense,
-                        details={'tache': tache.numero, 'montant': float(depense.montant)}
+                        details={
+                            'Statut': {'old': 'Nouvelle', 'new': depense.statut},
+                            'Montant Validé': {'old': '0 Ar', 'new': f"{float(depense.montant):,.0f} Ar"},
+                            'Mission Associée': {'old': '', 'new': tache.numero}
+                        }
                     )
 
         return depense
@@ -152,7 +165,11 @@ class FinanceService:
             message=f"Dépense {depense.numero} validée directement par le DG {user.username}",
             user=user,
             obj=depense,
-            details={'montant': float(depense.montant)}
+            details={
+                'Statut': {'old': 'Nouvelle', 'new': depense.statut},
+                'Montant Direct': {'old': '', 'new': f"{float(depense.montant):,.0f} Ar"},
+                'Motif': {'old': '', 'new': depense.motif}
+            }
         )
         
         return depense
@@ -165,12 +182,13 @@ class FinanceService:
             raise ValidationError("Permission refusée pour vérifier cette dépense.")
         
         # Security: Prevent self-verification
-        if depense.created_by == user:
+        if depense.created_by == user and getattr(user, 'role', '') != FinancesConstants.ROLE_DG:
             raise ValidationError("Vous ne pouvez pas vérifier votre propre dépense.")
         
         if depense.statut != Depense.STATUT_EN_ATTENTE:
             raise ValidationError("Cette dépense n'est pas en attente.")
 
+        ancienne_valeur = depense.statut
         depense.statut = Depense.STATUT_VERIFIEE
         depense.verifie_par = user
         depense.date_verification = timezone.now()
@@ -190,7 +208,11 @@ class FinanceService:
             message=f"Dépense {depense.numero} vérifiée par {user.username}",
             user=user,
             obj=depense,
-            details={'etape': 'verification_comptable'}
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': depense.statut},
+                'Montant Vérifié': {'old': '', 'new': f"{float(depense.montant):,.0f} Ar"},
+                'Commentaire': {'old': '', 'new': comment or 'Aucun'}
+            }
         )
         # Notifier le DG si nécessaire
         if depense.montant >= FinancesConstants.SEUIL_VALIDATION_DG:
@@ -207,7 +229,7 @@ class FinanceService:
     def validate_depense(cls, depense: Depense, user, comment: str = ""):
         """Validation finale (DG ou Comptable selon montant)"""
         # Security: Prevent self-validation
-        if depense.created_by == user:
+        if depense.created_by == user and getattr(user, 'role', '') != FinancesConstants.ROLE_DG:
             raise ValidationError("Vous ne pouvez pas valider votre propre dépense.")
 
         if not depense.user_can_validate(user):
@@ -217,15 +239,28 @@ class FinanceService:
         needs_dg = depense.necessite_validation_dg
         
         if needs_dg:
-            # Cas > 500k : DG ou Admin seulement
+            # Cas DG ou Admin seulement
             if user.role not in [FinancesConstants.ROLE_DG, FinancesConstants.ROLE_ADMIN]:
                  raise ValidationError("Validation DG requise pour ce montant.")
             
-            if depense.statut != Depense.STATUT_VERIFIEE:
-                raise ValidationError("La dépense doit d'abord être vérifiée.")
+            if not depense.tache:
+                # Hors mission : DG valide depuis EN_ATTENTE
+                if depense.statut not in [Depense.STATUT_EN_ATTENTE, Depense.STATUT_VERIFIEE]:
+                    raise ValidationError("Statut invalide pour validation DG (hors mission).")
+            else:
+                # En mission : Le comptable doit normalement vérifier d'abord
+                # SAUF si c'est le DG qui valide directement (Shortcut)
+                if depense.statut != Depense.STATUT_VERIFIEE and user.role != FinancesConstants.ROLE_DG:
+                    raise ValidationError("La dépense doit d'abord être vérifiée par le comptable.")
                 
             depense.valide_par_dg = user
             depense.date_validation_dg = timezone.now()
+            
+            # Si le DG valide alors que le comptable n'a pas encore vérifié,
+            # on marque le DG comme validateur administratif aussi pour la cohérence
+            if not depense.valide_par_comptable:
+                depense.valide_par_comptable = user
+                depense.date_validation_comptable = timezone.now()
         
         else:
             # Cas < 500k : Comptable, DG ou Admin
@@ -236,6 +271,7 @@ class FinanceService:
             depense.valide_par_comptable = user
             depense.date_validation_comptable = timezone.now()
 
+        ancienne_valeur = depense.statut
         depense.statut = Depense.STATUT_VALIDEE
         if comment:
             depense.commentaire_validation = comment
@@ -245,7 +281,12 @@ class FinanceService:
             action='validation',
             message=f"Dépense {depense.numero} validée par {user.username}",
             user=user,
-            obj=depense
+            obj=depense,
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': depense.statut},
+                'Montant Validé': {'old': '', 'new': f"{float(depense.montant):,.0f} Ar"},
+                'Commentaire': {'old': '', 'new': comment or 'Aucun'}
+            }
         )
         return depense
 
@@ -255,7 +296,7 @@ class FinanceService:
     def pay_depense(cls, depense: Depense, user, comment: str = ""):
         """Paiement de la dépense"""
         # Security: Prevent self-payment
-        if depense.created_by == user:
+        if depense.created_by == user and getattr(user, 'role', '') != FinancesConstants.ROLE_DG:
             raise ValidationError("Vous ne pouvez pas payer votre propre dépense.")
 
         if not depense.user_can_pay(user):
@@ -264,6 +305,7 @@ class FinanceService:
         if depense.statut != Depense.STATUT_VALIDEE:
             raise ValidationError("La dépense doit être validée avant paiement.")
 
+        ancienne_valeur = depense.statut
         depense.statut = Depense.STATUT_PAYEE
         depense.date_paiement = timezone.now()
         if comment:
@@ -274,7 +316,13 @@ class FinanceService:
             action='payment', # Action custom, mappée sur 'validation' ou 'update' dans AuditLog si 'payment' non existant, mais 'validation' est ok
             message=f"Dépense {depense.numero} payée par {user.username}",
             user=user,
-            obj=depense
+            obj=depense,
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': depense.statut},
+                'Montant Payé': {'old': '', 'new': f"{float(depense.montant):,.0f} Ar"},
+                'Date Paiement': {'old': '', 'new': timezone.now().strftime('%Y-%m-%d %H:%M:%S')},
+                'Commentaire': {'old': '', 'new': comment or 'Aucun'}
+            }
         )
         return depense
 
@@ -289,6 +337,7 @@ class FinanceService:
         if not comment:
             raise ValidationError("Un commentaire est requis pour le rejet.")
 
+        ancienne_valeur = depense.statut
         depense.statut = Depense.STATUT_REJETEE
         depense.commentaire_validation = comment
         
@@ -307,6 +356,33 @@ class FinanceService:
             message=f"Dépense {depense.numero} rejetée par {user.username}",
             user=user,
             obj=depense,
-            details={'raison': comment}
+            details={
+                'Statut': {'old': ancienne_valeur, 'new': depense.statut},
+                'Raison Rejet': {'old': '', 'new': comment},
+                'Montant Impacté': {'old': '', 'new': f"{float(depense.montant):,.0f} Ar"}
+            }
         )
         return depense
+    
+    @classmethod
+    @transaction.atomic
+    def approve_and_pay_depense(cls, depense: Depense, user, comment: str = ""):
+        """Shortcut : Valide et Paye une dépense en une seule opération (DG/Admin only)"""
+        # 1. Validation de sécurité
+        if user.role not in [FinancesConstants.ROLE_DG, FinancesConstants.ROLE_ADMIN]:
+            raise ValidationError("Seul le DG ou l'Administrateur peut utiliser ce raccourci.")
+        
+        # 2. Étape de validation
+        cls.validate_depense(depense, user, comment)
+        
+        # 3. Étape de paiement
+        cls.pay_depense(depense, user, comment)
+        
+        cls._log_audit(
+            action='validation',
+            message=f"Dépense {depense.numero} validée et payée directement par {user.username}",
+            user=user,
+            obj=depense
+        )
+        return depense
+

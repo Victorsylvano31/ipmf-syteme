@@ -22,4 +22,17 @@ django-extensions==3.2.3
 python-decouple==3.8
 psycopg2-binary==2.9.9
 google-generativeai==0.8.3
+
+# === PRODUCTION ===
+# Serveur WSGI de production (remplace runserver)
 gunicorn==21.2.0
+
+# Servir les fichiers statiques sans Nginx
+whitenoise==6.7.0
+
+# Parse l'URL de la base de données Render (DATABASE_URL)
+dj-database-url==2.2.0
+
+# Stockage des fichiers média sur le cloud (photos, pièces jointes)
+cloudinary==1.41.0
+django-cloudinary-storage==0.3.0

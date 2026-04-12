@@ -3,12 +3,12 @@ from rest_framework import permissions
 class CanCreateEntree(permissions.BasePermission):
     """Peut créer une entrée d'argent"""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['admin', 'caisse', 'comptable', 'dg']
+        return request.user.is_authenticated and request.user.role in ['admin', 'caisse', 'comptable', 'dg', 'agent']
 
 class CanConfirmEntree(permissions.BasePermission):
     """Peut confirmer une entrée d'argent"""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['admin', 'caisse', 'comptable', 'dg']
+        return request.user.is_authenticated and request.user.role in ['admin', 'caisse', 'dg']
 
 class CanCreateDepense(permissions.BasePermission):
     """Peut créer une dépense"""
@@ -28,7 +28,7 @@ class CanValidateDepense(permissions.BasePermission):
 class CanPayDepense(permissions.BasePermission):
     """Peut payer une dépense"""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['admin', 'comptable', 'caisse']
+        return request.user.is_authenticated and request.user.role in ['admin', 'comptable', 'caisse', 'dg']
 
 class CanViewAllFinances(permissions.BasePermission):
     """Peut voir toutes les données financières (Admin, DG, Comptable)"""

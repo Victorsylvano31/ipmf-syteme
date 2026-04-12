@@ -98,10 +98,10 @@ export default function DashboardComptable() {
                     <Card className="border-none shadow-2xl bg-[var(--color-bg-card)] overflow-hidden rounded-[28px] glass-card">
                         <CardHeader className="flex flex-row items-center justify-between p-8 border-b border-[var(--color-border-light)] bg-white/5">
                             <div>
-                                <CardTitle className="text-xl font-black tracking-tight">Demandes en attente</CardTitle>
-                                <p className="text-xs text-[var(--color-text-muted)] font-black uppercase tracking-[0.2em] mt-1">Files de vérification de conformité</p>
+                                <CardTitle className="text-xl font-black tracking-tight">Registre des dépenses payées</CardTitle>
+                                <p className="text-xs text-[var(--color-text-muted)] font-black uppercase tracking-[0.2em] mt-1">Audit de conformité (Lecture seule)</p>
                             </div>
-                            <Badge className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-4 py-1 font-black rounded-full">{data?.recent_activity?.length || 0} Alertes</Badge>
+                            <Badge className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-4 py-1 font-black rounded-full">{data?.recent_activity?.length || 0} Paiements</Badge>
                         </CardHeader>
                         <CardContent className="p-0">
                             {data?.recent_activity?.length > 0 ? (
@@ -123,7 +123,7 @@ export default function DashboardComptable() {
                                                 to={`/expenses/${expense.id}`}
                                                 className="px-6 py-2.5 bg-blue-500/10 text-blue-500 rounded-full hover:bg-blue-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
                                             >
-                                                Vérifier <ArrowRight size={14} />
+                                                Consulter <ArrowRight size={14} />
                                             </Link>
                                         </div>
                                     ))}
@@ -134,7 +134,7 @@ export default function DashboardComptable() {
                                         <CheckCircle size={40} />
                                     </div>
                                     <p className="font-black text-emerald-600 uppercase text-xs tracking-[0.2em]">Flux Nettoyé</p>
-                                    <p className="text-[11px] font-bold mt-2 opacity-60">Aucune demande en attente de vérification.</p>
+                                    <p className="text-[11px] font-bold mt-2 opacity-60">Aucune dépense récemment payée à auditer.</p>
                                 </div>
                             )}
                         </CardContent>

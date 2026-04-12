@@ -155,14 +155,12 @@ class Tache(models.Model):
         return self.agents_assignes.order_by('id').first()
 
     def peut_demarrer(self, user):
-        """Seul l'agent principal peut démarrer la mission."""
-        principal = self._get_agent_principal()
-        return principal is not None and user.id == principal.id and self.statut == 'creee'
+        """Seul l'agent principal (chef) peut démarrer la mission."""
+        return self.agent_principal_id == user.id and self.statut == 'creee'
     
     def peut_terminer(self, user):
-        """Seul l'agent principal peut marquer la mission comme terminée."""
-        principal = self._get_agent_principal()
-        return principal is not None and user.id == principal.id and self.statut == 'en_cours'
+        """Seul l'agent principal (chef) peut marquer la mission comme terminée."""
+        return self.agent_principal_id == user.id and self.statut == 'en_cours'
     
     def peut_valider(self, user):
         """Vérifie si l'utilisateur peut valider cette tâche"""
@@ -248,3 +246,61 @@ class SousTache(models.Model):
 
     def __str__(self):
         return f'{self.tache.numero} - {self.titre}'
+
+
+class LigneDevis(models.Model):
+    """Ligne d'un bon de commande/devis associé à une mission."""
+    tache = models.ForeignKey(
+        Tache,
+        on_delete=models.CASCADE,
+        related_name='lignes_devis',
+        verbose_name="Mission"
+    )
+    article = models.CharField(max_length=255, verbose_name="Article / Désignation")
+    quantite = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name="Quantité"
+    )
+    unite = models.CharField(max_length=50, blank=True, default='', verbose_name="Unité (ex: L, kg, pièce)")
+    prix_estime = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Prix unitaire estimé (Ar)"
+    )
+    prix_reel = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Prix unitaire réel (Ar)"
+    )
+    cree_par = models.ForeignKey(
+        User, on_delete=models.PROTECT,
+        related_name='lignes_devis_creees',
+        verbose_name="Créé par"
+    )
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "📋 Ligne de devis"
+        verbose_name_plural = "📋 Lignes de devis"
+        ordering = ['date_creation']
+
+    @property
+    def total_estime(self):
+        return self.quantite * self.prix_estime
+
+    @property
+    def total_reel(self):
+        if self.prix_reel is not None:
+            return self.quantite * self.prix_reel
+        return None
+
+    @property
+    def ecart(self):
+        if self.total_reel is not None:
+            return self.total_reel - self.total_estime
+        return None
+
+    def __str__(self):
+        return f'{self.tache.numero} - {self.article}'

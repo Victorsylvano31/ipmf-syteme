@@ -41,6 +41,7 @@ class FinancesConstants:
     
     # Seuils métier
     SEUIL_VALIDATION_DG = Decimal('500000.00')  # 500 000 Ar
+    SEUIL_CONFIRMATION_CAISSE = Decimal('100000.00')  # 100 000 Ar
     MONTANT_MIN_ENTREE = Decimal('1000.00')      # 1 000 Ar
     MONTANT_MAX_ENTREE = Decimal('1000000000.00')  # 1 milliard Ar
     
@@ -137,6 +138,10 @@ class PieceJustificativeMixin:
             return os.path.basename(self.piece_justificative.name)
         return ""
     
+    def get_piece_justificative_name(self) -> str:
+        """Alias pour le serializer"""
+        return self.get_piece_filename()
+    
     def has_valid_piece(self) -> bool:
         """Vérifie si la pièce existe et est valide"""
         if not self.piece_justificative:
@@ -181,10 +186,8 @@ class EntreeArgentQuerySet(models.QuerySet):
         
         role = getattr(user, 'role', '')
         
-        if role in [FinancesConstants.ROLE_DG, FinancesConstants.ROLE_COMPTABLE]:
+        if role in [FinancesConstants.ROLE_DG, FinancesConstants.ROLE_COMPTABLE, FinancesConstants.ROLE_CAISSE]:
             return self.all()
-        elif role == FinancesConstants.ROLE_CAISSE:
-            return self.filter(created_by=user)
         else:
             return self.filter(created_by=user)
     
@@ -418,12 +421,18 @@ class EntreeArgent(NumeroAutoMixin, PieceJustificativeMixin,
             return True
         
         role = getattr(user, 'role', '')
-        return role in [
-            FinancesConstants.ROLE_ADMIN,
-            FinancesConstants.ROLE_CAISSE,
-            FinancesConstants.ROLE_COMPTABLE,
-            FinancesConstants.ROLE_DG
-        ]
+        
+        if role in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_DG]:
+            return True
+            
+        if role == FinancesConstants.ROLE_COMPTABLE:
+            return True
+            
+        if role == FinancesConstants.ROLE_CAISSE:
+            # Le caissier ne peut confirmer que s'il s'agit d'un petit montant
+            return self.montant < FinancesConstants.SEUIL_CONFIRMATION_CAISSE
+            
+        return False
     
     def user_can_cancel(self, user) -> bool:
         """Vérifie si l'utilisateur peut annuler cette entrée"""
@@ -500,13 +509,12 @@ class DepenseQuerySet(models.QuerySet):
         role = getattr(user, 'role', '')
         
         if role == FinancesConstants.ROLE_DG:
+            return self.all()
+        elif role == FinancesConstants.ROLE_COMPTABLE:
             return self.filter(
                 models.Q(created_by=user) |
-                models.Q(statut=Depense.STATUT_VERIFIEE) |
-                models.Q(valide_par_dg=user)
+                models.Q(statut=Depense.STATUT_PAYEE)
             )
-        elif role == FinancesConstants.ROLE_COMPTABLE:
-            return self.all()
         elif role == FinancesConstants.ROLE_CAISSE:
             return self.filter(
                 models.Q(created_by=user) |
@@ -564,7 +572,7 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
     ]
     
     STATUT_TRANSITIONS = {
-        STATUT_EN_ATTENTE: [STATUT_VERIFIEE, STATUT_REJETEE],
+        STATUT_EN_ATTENTE: [STATUT_VERIFIEE, STATUT_VALIDEE, STATUT_REJETEE],
         STATUT_VERIFIEE: [STATUT_VALIDEE, STATUT_REJETEE],
         STATUT_VALIDEE: [STATUT_PAYEE, STATUT_REJETEE],
         STATUT_PAYEE: [],  # Terminal
@@ -824,8 +832,8 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
         # Note: Le montant est calculé automatiquement dans save() avant clean()
         # donc pas besoin de le valider ici
         
-        # Validation: workflow cohérent
-        if self.valide_par_dg and not self.valide_par_comptable:
+        # Validation: workflow cohérent (Le DG peut bypasser le comptable)
+        if self.valide_par_dg and not self.valide_par_comptable and self.valide_par_dg.role != FinancesConstants.ROLE_DG:
             errors['valide_par_dg'] = "Doit d'abord être validé par le comptable"
         
         if self.date_validation_dg and not self.valide_par_dg:
@@ -848,6 +856,8 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
     @property
     def necessite_validation_dg(self) -> bool:
         """Vérifie si la dépense nécessite validation DG"""
+        if not self.tache:
+            return True
         return self.montant >= FinancesConstants.SEUIL_VALIDATION_DG
     
     @property
@@ -880,6 +890,9 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
         if user.is_superuser:
             return True
         
+        if not self.tache:
+            return False # Le comptable ne fait rien sur les dépenses hors mission
+            
         role = getattr(user, 'role', '')
         return role in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_COMPTABLE]
     
@@ -891,9 +904,15 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
         role = getattr(user, 'role', '')
         
         if role == FinancesConstants.ROLE_DG:
-            return self.necessite_validation_dg and self.statut == self.STATUT_VERIFIEE
+            if not self.tache:
+                return self.statut in [self.STATUT_EN_ATTENTE, self.STATUT_VERIFIEE]
+            # Pour les missions, le DG peut maintenant bypasser la vérification
+            # si c'est une grosse dépense ou s'il décide d'intervenir
+            return self.statut in [self.STATUT_EN_ATTENTE, self.STATUT_VERIFIEE]
         
         if role == FinancesConstants.ROLE_COMPTABLE:
+            if not self.tache:
+                return False # Bypass comptable pour hors mission
             return not self.necessite_validation_dg and self.statut == self.STATUT_EN_ATTENTE
         
         return False
@@ -905,7 +924,7 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
         
         role = getattr(user, 'role', '')
         return (
-            role in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_COMPTABLE, FinancesConstants.ROLE_CAISSE] and
+            role in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_CAISSE, FinancesConstants.ROLE_DG] and
             self.statut == self.STATUT_VALIDEE
         )
 
@@ -932,11 +951,13 @@ class Depense(NumeroAutoMixin, PieceJustificativeMixin,
         
         role = getattr(user, 'role', '')
         
-        # Seuls admin, comptable et DG peuvent rejeter
-        if role not in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_COMPTABLE, FinancesConstants.ROLE_DG]:
-            return False
+        if not self.tache:
+            if role not in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_DG]:
+                return False
+        else:
+            if role not in [FinancesConstants.ROLE_ADMIN, FinancesConstants.ROLE_COMPTABLE, FinancesConstants.ROLE_DG]:
+                return False
         
-        # On peut rejeter aux étapes en_attente ou verifiee
         return self.statut in [self.STATUT_EN_ATTENTE, self.STATUT_VERIFIEE]
     
     # ============ MÉTHODES DE WORKFLOW ============

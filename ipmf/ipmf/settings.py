@@ -8,6 +8,7 @@ Configuration pour Madagascar - Environnements Développement et Production
 from pathlib import Path
 from datetime import timedelta
 import os
+import dj_database_url
 from decouple import config
 
 # =============================================================================
@@ -22,7 +23,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-pro
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,192.168.200.200,0.0.0.0,.localhost',
+    default='localhost,127.0.0.1,192.168.200.200,0.0.0.0,.localhost,*',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
@@ -53,6 +54,8 @@ LOCAL_APPS = [
     'dashboard',
     'audit',
     'notifications.apps.NotificationsConfig',
+    'students.apps.StudentsConfig',
+    'feedback',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -63,6 +66,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Toujours en premier
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Servir les statiques en production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -97,16 +101,28 @@ WSGI_APPLICATION = 'ipmf.wsgi.application'
 # =============================================================================
 # BASE DE DONNÉES
 # =============================================================================
-DATABASES = {
-    'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
+# =============================================================================
+# BASE DE DONNÉES
+# =============================================================================
+# En production (Render), DATABASE_URL est définie automatiquement
+# En développement, on utilise SQLite par défaut
+DATABASE_URL = config('DATABASE_URL', default=None)
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+            'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
+            'USER': config('DB_USER', default=''),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default=''),
+            'PORT': config('DB_PORT', default=''),
+        }
+    }
 
 # =============================================================================
 # VALIDATION DES MOTS DE PASSE
@@ -132,9 +148,25 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# =============================================================================
+# FICHIERS MÉDIAS — Cloudinary en production, disque local en développement
+# =============================================================================
+CLOUDINARY_URL = config('CLOUDINARY_URL', default=None)
+
+if CLOUDINARY_URL and not DEBUG:
+    # Production: stockage cloud (Cloudinary)
+    INSTALLED_APPS += ['cloudinary_storage', 'cloudinary']
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    CLOUDINARY_STORAGE = {
+        'CLOUDINARY_URL': CLOUDINARY_URL,
+    }
+    MEDIA_URL = '/media/'
+else:
+    # Développement: stockage local
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -179,8 +211,8 @@ if DEBUG:
 # JWT SIMPLE
 # =============================================================================
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
@@ -262,6 +294,7 @@ required_dirs = [
     BASE_DIR / 'media/depenses/pieces',
     BASE_DIR / 'media/taches/documents',
     BASE_DIR / 'media/signatures',
+    BASE_DIR / 'media/etudiants/photos',
     BASE_DIR / 'staticfiles',
 ]
 

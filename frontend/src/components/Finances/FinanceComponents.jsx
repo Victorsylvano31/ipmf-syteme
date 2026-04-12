@@ -46,9 +46,11 @@ export const StatusBadge = ({ status, type = 'expense' }) => {
 };
 
 export const FilePreview = ({ url, filename }) => {
-    if (!url) return <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Aucune pièce jointe</div>;
+    if (!url) return <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', padding: '16px', border: '1px dashed var(--color-border)', borderRadius: '12px', textAlign: 'center' }}>Aucune pièce jointe.</div>;
 
-    const isImage = /\.(jpg|jpeg|png|gif)$/i.test(url);
+    // Check for image types, ignoring query parameters like ?X-Amz-Algorithm=...
+    const urlWithoutQuery = url.split('?')[0];
+    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(urlWithoutQuery);
 
     return (
         <div style={{ marginTop: '12px', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -60,7 +62,16 @@ export const FilePreview = ({ url, filename }) => {
             </div>
             {isImage ? (
                 <div style={{ padding: '16px', textAlign: 'center', background: 'rgba(255,255,255,0.05)' }}>
-                    <img src={url} alt="Preview" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px' }} />
+                    <img 
+                        src={url} 
+                        alt="Preview" 
+                        style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '4px', objectFit: 'contain' }} 
+                        onError={(e) => {
+                            e.target.onerror = null; // Prevent infinite loop
+                            e.target.style.display = 'none';
+                            e.target.insertAdjacentHTML('afterend', '<div style="padding: 20px; color: var(--color-text-muted);">Aperçu indisponible. Le fichier n\'a pas pu être chargé.</div>');
+                        }}
+                    />
                 </div>
             ) : (
                 <div style={{ padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', color: 'var(--color-text-muted)' }}>

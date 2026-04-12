@@ -24,6 +24,12 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
 import NotificationsPage from './pages/NotificationsPage';
 import AssistantChat from './components/AI/AssistantChat';
+import StudentsList from './components/Students/StudentsList';
+import StudentForm from './components/Students/StudentForm';
+import StudentDetail from './components/Students/StudentDetail';
+import FormationsManagement from './components/Students/FormationsManagement';
+import StudentsDashboard from './components/Students/StudentsDashboard';
+import FeedbackPage from './components/Feedback/FeedbackPage';
 
 const MainLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -72,9 +78,19 @@ export default function Router() {
                         <Route path="/tasks" element={<TasksList />} />
                         <Route path="/tasks/new" element={<TaskForm />} />
                         <Route path="/tasks/:id" element={<TaskDetail />} />
+                        <Route path="/tasks/:id/edit" element={<TaskForm />} />
 
-                        {/* Management & Finance (Restricted to non-agents) */}
-                        <Route element={<ProtectedRoute isAllowed={hasRole(['admin', 'dg', 'comptable', 'caisse'])} redirectPath="/dashboard" />}>
+                        {/* Module Étudiants - Restreint à Admin, DG et Caisse */}
+                        <Route element={<ProtectedRoute isAllowed={hasRole(['admin', 'dg', 'caisse'])} redirectPath="/dashboard" />}>
+                            <Route path="/students" element={<StudentsList />} />
+                            <Route path="/students/dashboard" element={<StudentsDashboard />} />
+                            <Route path="/students/formations" element={<FormationsManagement />} />
+                            <Route path="/students/new" element={<StudentForm />} />
+                            <Route path="/students/:id" element={<StudentDetail />} />
+                        </Route>
+
+                        {/* Management & Finance (Restricted to non-agents) - Now allowing agents specifically for income/expenses */}
+                        <Route element={<ProtectedRoute isAllowed={hasRole(['admin', 'dg', 'comptable', 'caisse', 'agent'])} redirectPath="/dashboard" />}>
                             <Route path="/finances" element={<FinancesDashboard />} />
 
                             {/* Analytics (Restricted to admin, dg, comptable) */}
@@ -92,6 +108,7 @@ export default function Router() {
                         <Route path="/expenses/new" element={<ExpenseForm />} />
                         <Route path="/expenses/:id" element={<ExpenseDetail />} />
                         <Route path="/profile" element={<Profile />} />
+                        <Route path="/feedback" element={<FeedbackPage />} />
 
                         {/* Restricted to Admin and DG */}
                         <Route element={<ProtectedRoute isAllowed={hasRole(['admin', 'dg'])} redirectPath="/dashboard" />}>

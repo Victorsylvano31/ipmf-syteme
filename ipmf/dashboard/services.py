@@ -317,21 +317,25 @@ class DashboardService:
         aujourdhui = timezone.now().date()
         entrees_jour = float(EntreeArgent.objects.filter(date_entree=aujourdhui, statut='confirmee').aggregate(Sum('montant'))['montant__sum'] or 0)
         
+        # Décaissements du mois (Dépenses payées ce mois-ci)
+        debut_mois = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        decaissements_mois = float(Depense.objects.filter(date_paiement__gte=debut_mois, statut='payee').aggregate(Sum('montant'))['montant__sum'] or 0)
+        
         return {
             'kpis': [
                 {
-                    'label': 'À Payer',
-                    'value': count_a_payer,
-                    'trend': 0,
-                    'sparkline': None,
-                    'color': 'blue'
-                },
-                {
-                    'label': 'Montant à décaisser',
+                    'label': 'À Payer (En attente)',
                     'value': f"{montant_a_payer:,.0f} Ar".replace(',', ' '),
                     'trend': 0,
                     'sparkline': None,
                     'color': 'orange'
+                },
+                {
+                    'label': 'Décaissements du Mois',
+                    'value': f"{decaissements_mois:,.0f} Ar".replace(',', ' '),
+                    'trend': 0,
+                    'sparkline': None,
+                    'color': 'blue'
                 },
                 {
                     'label': 'Recettes du Jour',

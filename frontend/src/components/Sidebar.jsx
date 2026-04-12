@@ -14,7 +14,9 @@ import {
     Sun,
     ChevronLeft,
     BarChart3,
-    Activity
+    Activity,
+    GraduationCap,
+    Lightbulb
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,15 +33,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
     const canSeeAnalytics = ['admin', 'dg', 'comptable'].includes(user.role);
     const isAdminOrDG = ['admin', 'dg'].includes(user.role);
+    const canSeeStudents = ['admin', 'dg', 'caisse'].includes(user.role);
 
     const navItems = [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
         { to: '/tasks', icon: ClipboardList, label: 'Missions' },
         { to: '/expenses', icon: Wallet, label: 'Dépenses' },
-        ...(user.role !== 'agent' ? [{ to: '/finances', icon: Wallet, label: 'Finances' }] : []),
+        { to: '/finances', icon: Wallet, label: 'Finances' },
+        ...(canSeeStudents ? [{ to: '/students', icon: GraduationCap, label: 'Étudiants' }] : []),
         ...(canSeeAnalytics ? [{ to: '/finances/analytics', icon: BarChart3, label: 'Rapports' }] : []),
         ...(isAdminOrDG ? [{ to: '/users', icon: Users, label: 'Utilisateurs' }] : []),
         ...(isAdminOrDG ? [{ to: '/audit', icon: Activity, label: 'Journal d\'Audit' }] : []),
+        { to: '/feedback', icon: Lightbulb, label: user.role === 'admin' ? 'Boîte de Réception' : 'Boîte à Idées' },
         { to: '/profile', icon: User, label: 'Profil' },
     ];
 
@@ -74,7 +79,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xl font-black text-white tracking-tighter leading-none">IPMF</span>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">Sytème v2</span>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">Système v2</span>
                         </div>
                     </div>
                     <button

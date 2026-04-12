@@ -41,3 +41,24 @@ db.sqlite3
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media (fichiers uploadés localement)
+ipmf/media/
+
+# Build frontend
+frontend/build/
+
+# Env files (SECRETS - ne jamais committer)
+*.env
+.env.*
+!.env.production
+!frontend/.env.production
+
+# Ngrok
+ngrok.zip
+ngrok/
+*.log

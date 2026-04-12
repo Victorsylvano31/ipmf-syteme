@@ -25,6 +25,8 @@ urlpatterns = [
     path('api/dashboard/', include('dashboard.urls')), # Tableaux de bord et rapports
     path('api/audit/', include('audit.urls')),        # Journalisation et audit système
     path('api/notifications/', include('notifications.urls')), # Système de notifications
+    path('api/students/', include('students.urls')),          # Module Étudiants
+    path('api/feedback/', include('feedback.urls')),          # Module Boîte à Idées
 ]
 
 # Servir les fichiers média et statiques en mode développement uniquement

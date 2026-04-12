@@ -75,7 +75,7 @@ export default function IncomeForm() {
         }
     };
 
-    const canCreate = ['admin', 'caisse', 'comptable', 'dg'].includes(user?.role);
+    const canCreate = ['admin', 'caisse', 'comptable', 'dg', 'agent'].includes(user?.role);
 
     if (!canCreate) {
         return (

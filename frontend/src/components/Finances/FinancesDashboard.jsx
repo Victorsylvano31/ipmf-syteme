@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardComptable from '../Dashboard/DashboardComptable';
 import DashboardCaisse from '../Dashboard/DashboardCaisse';
@@ -9,7 +9,8 @@ import {
     TrendingUp,
     Receipt,
     ChevronRight,
-    Plus
+    Plus,
+    ArrowUpRight
 } from 'lucide-react';
 import api from '../../api/axios';
 import { formatCurrency } from '../../utils/formatters';
@@ -19,6 +20,7 @@ import styles from './Finances.module.css';
 
 export default function FinancesDashboard() {
     const { user } = useAuth();
+
     const [stats, setStats] = useState({
         totalIncome: 0,
         totalExpenses: 0,
@@ -27,6 +29,8 @@ export default function FinancesDashboard() {
     });
 
     useEffect(() => {
+        if (user?.role === 'agent') return;
+
         const fetchStats = async () => {
             try {
                 // Use analytics endpoint to get correct overall totals (avoids pagination issues)
@@ -46,48 +50,57 @@ export default function FinancesDashboard() {
         };
 
         fetchStats();
-    }, []);
+    }, [user?.role]); // added user?.role to dependency array just in case
+
+    if (user?.role === 'agent') {
+        return <Navigate to="/finances/incomes" replace />;
+    }
+
+    if (user?.role === 'caisse') {
+        return (
+            <div className={styles.financeContainer}>
+                <DashboardCaisse />
+            </div>
+        );
+    }
+
+    if (user?.role === 'comptable') {
+        return (
+            <div className={styles.financeContainer}>
+                <DashboardComptable />
+            </div>
+        );
+    }
 
     return (
         <div className={styles.financeContainer}>
-            {/* Premium Strategic Banner */}
-            <div className="relative overflow-hidden rounded-[32px] bg-slate-900 bg-mesh-slate p-10 lg:p-12 shadow-2xl animate-slide-up border border-white/10 mb-10">
-                <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-
-                <div className="absolute top-0 right-0 p-6 z-20 flex flex-wrap gap-3 justify-end items-center">
-                    <Link to="/expenses/new">
-                        <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/10 backdrop-blur-md rounded-full px-6 border border-white/5 font-bold text-xs uppercase tracking-widest h-11">
-                            <Plus size={18} className="mr-2" />
-                            <span>Dépense</span>
-                        </Button>
-                    </Link>
-                    <Link to="/finances/incomes/new">
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-xl shadow-emerald-600/20 font-black rounded-full px-8 py-2.5 h-11 text-[11px] uppercase tracking-widest group">
-                            <ArrowUpCircle size={20} className="mr-2 group-hover:translate-y--0.5 transition-transform" />
-                            <span>Enregistrer Entrée</span>
-                        </Button>
-                    </Link>
+            {/* Main Finances Banner */}
+            <div className={`${styles.financeBanner} animate-slide-up`}>
+                <div className={styles.bannerContent}>
+                    <span className={styles.bannerBadge}>PILOTAGE FINANCIER</span>
+                    <h1 className={styles.bannerTitle}>Gestion <span className={styles.bannerTitleHighlight}>Financière</span></h1>
+                    <p className={styles.bannerDesc}>
+                        Orchestration des flux de trésorerie et analyse de la performance budgétaire.
+                    </p>
                 </div>
-
-                <header className="relative z-10 flex flex-col justify-center min-h-[140px]">
-                    <div className="space-y-4">
-                        <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30 backdrop-blur-xl px-4 py-1.5 font-black tracking-[0.2em] uppercase text-[10px] w-fit">
-                            PILOTAGE FINANCIER
-                        </Badge>
-                        <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tighter leading-tight drop-shadow-2xl">
-                            Gestion <span className="text-blue-400">Financière</span>
-                        </h1>
-                        <p className="text-white/70 font-semibold text-lg max-w-2xl leading-relaxed">
-                            Orchestration des flux de trésorerie et analyse de la performance budgétaire.
-                        </p>
-                    </div>
-                </header>
+                <div className={styles.bannerActions}>
+                    {user?.permissions?.includes('can_create_depense') && (
+                        <Link to="/expenses/new" className={styles.btnDepense}>
+                            <Plus size={18} /> DÉPENSE
+                        </Link>
+                    )}
+                    {user?.permissions?.includes('can_create_entree') && (
+                        <Link to="/finances/incomes/new" className={styles.btnEntree}>
+                            <ArrowUpRight size={18} /> ENREGISTRER ENTRÉE
+                        </Link>
+                    )}
+                </div>
             </div>
 
             {/* Role-Based Action Sections */}
             <div style={{ marginBottom: '32px' }}>
-                {['comptable', 'admin'].includes(user?.role) && <DashboardComptable />}
-                {['caisse', 'admin'].includes(user?.role) && <DashboardCaisse />}
+                {['admin'].includes(user?.role) && <DashboardComptable />}
+                {['admin'].includes(user?.role) && <DashboardCaisse />}
             </div>
 
             <div className={`${styles.statsGrid} animate-slide-up stagger-1`}>

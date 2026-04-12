@@ -46,7 +46,9 @@ export default function TasksList() {
                 t.numero?.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-        if (statusFilter !== 'tous') {
+        if (statusFilter === 'retard') {
+            result = result.filter(t => t.est_en_retard && !['terminee', 'validee', 'annulee'].includes(t.statut));
+        } else if (statusFilter !== 'tous') {
             result = result.filter(t => t.statut === statusFilter);
         }
         setFilteredTasks(result);
@@ -170,6 +172,7 @@ export default function TasksList() {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                 >
                                     <option value="tous">Tous les statuts</option>
+                                    <option value="retard">⚠️ Expiré / En Retard</option>
                                     <option value="creee">Nouveau</option>
                                     <option value="en_cours">En cours</option>
                                     <option value="terminee">Terminé</option>

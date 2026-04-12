@@ -39,7 +39,16 @@ def current_user_simple(request):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_created')
-    permission_classes = [permissions.IsAuthenticated, CanManageUsers]
+    
+    def get_permissions(self):
+        """
+        Permissions personnalisées :
+        - list/retrieve/me : Tous les utilisateurs authentifiés
+        - create/update/delete : Admin et DG via CanManageUsers
+        """
+        if self.action in ['list', 'retrieve', 'me']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), CanManageUsers()]
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -55,15 +64,27 @@ class UserViewSet(viewsets.ModelViewSet):
         elif user.role == 'dg':
             return User.objects.exclude(role='admin')
         elif user.role in ['comptable', 'caisse']:
-            return User.objects.filter(
-                Q(id=user.id) | 
-                Q(departement=user.departement) |
-                Q(role__in=['agent', 'superviseur_it'])
-            )
-        return User.objects.filter(id=user.id)
+            return User.objects.exclude(role__in=['admin', 'dg'])
+        # Par défaut (agent, etc.), ils voient tous les employés sauf la direction (DG/Admin)
+        # pour pouvoir constituer une équipe polyvalente
+        return User.objects.exclude(role__in=['admin', 'dg'])
 
     def perform_create(self, serializer):
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.id == request.user.id:
+            return Response(
+                {"error": "Vous ne pouvez pas supprimer votre propre compte."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if getattr(instance, 'is_superuser', False):
+            return Response(
+                {"error": "Il est interdit de supprimer le super-administrateur du système."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):

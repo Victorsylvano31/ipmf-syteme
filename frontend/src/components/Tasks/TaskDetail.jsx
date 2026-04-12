@@ -25,7 +25,9 @@ import {
     Calendar,
     Send,
     ListChecks,
-    Trash2
+    Trash2,
+    Search,
+    Edit2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import Button from '../ui/Button';
@@ -42,13 +44,29 @@ export default function TaskDetail() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [comment, setComment] = useState('');
+    const [newCommentOnly, setNewCommentOnly] = useState('');
     const [resultResult, setResultResult] = useState('');
-    const { refresh: fetchNotifications } = useNotifications();
+    const { addToast, refresh: fetchNotifications } = useNotifications();
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportDate, setReportDate] = useState('');
     const [reportMotif, setReportMotif] = useState('');
     const [newSubTask, setNewSubTask] = useState('');
     const [subTaskAssignee, setSubTaskAssignee] = useState('');
+    
+    // Nouveaux états pour gestion équipe
+    const [availableUsers, setAvailableUsers] = useState([]);
+    const [showTeamModal, setShowTeamModal] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedTeam, setSelectedTeam] = useState([]);
+
+    // États pour le bon de commande (devis)
+    const [newLigne, setNewLigne] = useState({ article: '', quantite: '', unite: '', prix_estime: '' });
+    const [editingRealPrice, setEditingRealPrice] = useState({}); // { [ligneId]: prixReel }
+    const [editingEstimePrice, setEditingEstimePrice] = useState({}); // { [ligneId]: prixEstime }
+
+    // État pour l'édition inline du budget
+    const [editingBudget, setEditingBudget] = useState(false);
+    const [budgetInput, setBudgetInput] = useState('');
 
     const fetchTask = useCallback(async () => {
         try {
@@ -116,6 +134,45 @@ export default function TaskDetail() {
         }
     };
 
+    const handleUpdateTeam = async () => {
+        try {
+            await api.post(`tasks/taches/${id}/gerer_equipe/`, {
+                agents: selectedTeam
+            });
+            setShowTeamModal(false);
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la mise à jour de l'équipe.");
+        }
+    };
+
+    const fetchUsers = async () => {
+        try {
+            const res = await api.get('users/?page_size=100');
+            // L'API renvoie un objet paginé { count, results: [...] }
+            const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
+            setAvailableUsers(data);
+        } catch (err) {
+            console.error("Error fetching users:", err);
+        }
+    };
+
+    const handlePostComment = async () => {
+        if (!newCommentOnly.trim()) return;
+        try {
+            await api.post('tasks/commentaires/', {
+                tache: id,
+                message: newCommentOnly
+            });
+            setNewCommentOnly('');
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de l'envoi du commentaire.");
+        }
+    };
+
     const handleAddSubTask = async () => {
         if (!newSubTask.trim()) return;
         try {
@@ -152,6 +209,91 @@ export default function TaskDetail() {
         }
     };
 
+    const handleDeleteTask = async () => {
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette mission ?")) return;
+        try {
+            await api.delete(`tasks/taches/${id}/`);
+            addToast("La mission a été supprimée.", "success");
+            navigate('/tasks');
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la suppression : " + (err.response?.data?.error || err.message));
+        }
+    };
+
+    // --- Bon de Commande handlers ---
+    const handleAddLigne = async () => {
+        const { article, quantite, prix_estime } = newLigne;
+        if (!article || !quantite || !prix_estime) {
+            alert("Veuillez remplir l'article, la quantité et le prix estimé.");
+            return;
+        }
+        try {
+            await api.post('tasks/lignes-devis/', { tache: id, ...newLigne });
+            setNewLigne({ article: '', quantite: '', unite: '', prix_estime: '' });
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+            alert("Erreur : " + (err.response?.data?.detail || err.message));
+        }
+    };
+
+    const handleSaveRealPrice = async (ligneId) => {
+        const prix = editingRealPrice[ligneId];
+        if (prix === undefined || prix === '') return;
+        try {
+            await api.patch(`tasks/lignes-devis/${ligneId}/`, { prix_reel: prix });
+            setEditingRealPrice(prev => { const n = {...prev}; delete n[ligneId]; return n; });
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la mise à jour : " + (err.response?.data?.detail || err.message));
+        }
+    };
+
+    const handleSaveEstimePrice = async (ligneId) => {
+        const prix = editingEstimePrice[ligneId];
+        if (prix === undefined || prix === '') return;
+        try {
+            await api.patch(`tasks/lignes-devis/${ligneId}/`, { prix_estime: prix });
+            setEditingEstimePrice(prev => { const n = {...prev}; delete n[ligneId]; return n; });
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la mise à jour : " + (err.response?.data?.detail || err.message));
+        }
+    };
+
+    const handleDeleteLigne = async (ligneId) => {
+        if (!window.confirm("Supprimer cette ligne ?")) return;
+        try {
+            await api.delete(`tasks/lignes-devis/${ligneId}/`);
+            fetchTask();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // --- Budget handlers ---
+    const handleSaveBudget = async (value) => {
+        try {
+            await api.patch(`tasks/taches/${id}/`, { budget_alloue: value });
+            setEditingBudget(false);
+            fetchTask();
+            addToast("Budget mis à jour avec succès.", "success");
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors de la mise à jour du budget : " + (err.response?.data?.error || err.message));
+        }
+    };
+
+    const handleSyncBudgetFromDevis = async () => {
+        if (!task.lignes_devis?.length) return;
+        const total = task.lignes_devis.reduce((sum, l) => sum + parseFloat(l.total_estime || 0), 0);
+        if (!window.confirm(`Définir le budget à ${total.toLocaleString()} Ar (total du bon de commande) ?`)) return;
+        await handleSaveBudget(total);
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -171,6 +313,7 @@ export default function TaskDetail() {
 
     const statusStyle = formatStatus(task.statut);
     const isAdminOrDG = ['admin', 'dg'].includes(user?.role);
+    const isChef = task.agent_principal === user?.id;
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -186,6 +329,28 @@ export default function TaskDetail() {
                     Retour à la liste
                 </Button>
                 <div className="flex items-center gap-3">
+                    {isAdminOrDG && task.statut === 'creee' && (!task.date_debut || new Date(task.date_debut) > new Date()) && (
+                        <div className="flex items-center gap-2 mr-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                icon={Edit2}
+                                onClick={() => navigate(`/tasks/${id}/edit`)}
+                                className="text-blue-600 border-blue-100 hover:bg-blue-50"
+                            >
+                                Modifier
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                icon={Trash2}
+                                onClick={handleDeleteTask}
+                                className="text-red-600 border-red-100 hover:bg-red-50"
+                            >
+                                Supprimer
+                            </Button>
+                        </div>
+                    )}
                     <Badge
                         variant={task.priorite === 'urgente' ? 'danger' : task.priorite === 'haute' ? 'accent' : 'primary'}
                         className="px-3 py-1 font-bold text-xs uppercase"
@@ -240,8 +405,8 @@ export default function TaskDetail() {
                                                 type="checkbox"
                                                 checked={st.est_terminee}
                                                 onChange={() => handleToggleSubTask(st.id)}
-                                                disabled={!isAdminOrDG && (st.assigne_a !== user?.id || ['terminee', 'validee', 'annulee'].includes(task.statut))}
-                                                className={`w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 ${(!isAdminOrDG && (st.assigne_a !== user?.id || ['terminee', 'validee', 'annulee'].includes(task.statut))) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                disabled={(!isAdminOrDG && !isChef) || ['terminee', 'validee', 'annulee'].includes(task.statut)}
+                                                className={`w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 ${((!isAdminOrDG && !isChef) || ['terminee', 'validee', 'annulee'].includes(task.statut)) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                             />
                                             <span className={`flex-1 text-sm font-medium ${st.est_terminee ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                                                 {st.titre}
@@ -251,7 +416,7 @@ export default function TaskDetail() {
                                                     {st.assigne_a_name}
                                                 </Badge>
                                             )}
-                                            {(isAdminOrDG || task.createur === user?.id) && (
+                                            {(isAdminOrDG || isChef) && (
                                                 <button
                                                     onClick={() => handleDeleteSubTask(st.id)}
                                                     className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all"
@@ -262,7 +427,7 @@ export default function TaskDetail() {
                                         </div>
                                     ))}
 
-                                    {isAdminOrDG && (
+                                    {(isAdminOrDG || isChef) && (
                                         <div className="flex flex-col gap-2 mt-4">
                                             <div className="flex gap-2">
                                                 <Input
@@ -385,38 +550,245 @@ export default function TaskDetail() {
 
                                 {/* Overdue Handling */}
                                 {(task.est_en_retard || (task.statut === 'terminee' && task.resultat === 'ECHEC_AUTOMATIQUE')) && (
-                                    <div className="mt-8 p-6 bg-red-50 rounded-2xl border border-red-100 space-y-4">
-                                        <div className="flex items-center gap-3 text-red-700">
-                                            <AlertTriangle size={24} className="animate-pulse" />
+                                    <div className={`mt-8 p-6 rounded-2xl border ${isAdminOrDG ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'} space-y-4`}>
+                                        <div className={`flex items-center gap-3 ${isAdminOrDG ? 'text-amber-700' : 'text-red-700'}`}>
+                                            <AlertTriangle size={24} className={isAdminOrDG ? '' : 'animate-pulse'} />
                                             <div>
-                                                <p className="font-bold text-lg">Problème de délai détecté</p>
-                                                <p className="text-sm opacity-80">La mission est en retard ou en échec. Un report est nécessaire.</p>
+                                                <p className="font-bold text-lg">{isAdminOrDG ? 'Retard constaté' : 'Problème de délai détecté'}</p>
+                                                <p className="text-sm opacity-80">
+                                                    {isAdminOrDG 
+                                                        ? "Cette mission a dépassé son échéance. En attente d'une action ou d'un rapport." 
+                                                        : "La mission est en retard ou en échec. Un report est nécessaire."}
+                                                </p>
                                             </div>
                                         </div>
 
                                         {task.pending_report ? (
-                                            <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-red-100">
-                                                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                                            <div className={`flex items-center gap-4 bg-white p-4 rounded-xl border ${isAdminOrDG ? 'border-amber-100' : 'border-red-100'}`}>
+                                                <div className={`w-10 h-10 rounded-full ${isAdminOrDG ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center`}>
                                                     <Clock size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-blue-900">Demande de report en attente</p>
+                                                    <p className={`text-sm font-bold ${isAdminOrDG ? 'text-amber-900' : 'text-blue-900'}`}>Demande de report en attente</p>
                                                     <p className="text-xs text-slate-500">Pour le : {new Date(task.pending_report.date_demandee).toLocaleDateString('fr-FR')}</p>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <Button
-                                                variant="danger"
-                                                icon={CalendarClock}
-                                                onClick={() => setShowReportModal(true)}
-                                                className="w-full shadow-lg shadow-red-500/20"
-                                            >
-                                                Demander un report (Dérogation)
-                                            </Button>
+                                            /* Seul l'agent ou le chef peut demander un report */
+                                            !isAdminOrDG && (
+                                                <Button
+                                                    variant="danger"
+                                                    icon={CalendarClock}
+                                                    onClick={() => setShowReportModal(true)}
+                                                    className="w-full shadow-lg shadow-red-500/20"
+                                                >
+                                                    Demander un report (Dérogation)
+                                                </Button>
+                                            )
                                         )}
                                     </div>
                                 )}
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Bon de Commande / Devis */}
+                    <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
+                        <div className="h-1.5 w-full bg-emerald-600" />
+                        <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                    <span>🛒</span>
+                                    <span>Bon de Commande</span>
+                                </CardTitle>
+                                {task.lignes_devis?.length > 0 && (() => {
+                                    const totalEst = task.lignes_devis.reduce((s, l) => s + parseFloat(l.total_estime || 0), 0);
+                                    const totalReal = task.lignes_devis.filter(l => l.total_reel != null).reduce((s, l) => s + parseFloat(l.total_reel || 0), 0);
+                                    const ecart = totalReal - task.lignes_devis.filter(l => l.total_reel != null).reduce((s, l) => s + parseFloat(l.total_estime || 0), 0);
+                                    return (
+                                        <div className="text-right">
+                                            <p className="text-xs text-slate-400 uppercase font-bold">Total Estimé</p>
+                                            <p className="text-lg font-black text-slate-800 dark:text-slate-100">{totalEst.toLocaleString()} Ar</p>
+                                            {totalReal > 0 && (
+                                                <p className={`text-xs font-bold ${ecart > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                    Réel : {totalReal.toLocaleString()} Ar ({ecart > 0 ? '+' : ''}{ecart.toLocaleString()} Ar)
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700">
+                                        <tr>
+                                            <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Article</th>
+                                            <th className="text-center px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Qté/Unité</th>
+                                            <th className="text-right px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Prix Estimé</th>
+                                            <th className="text-right px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Estimé</th>
+                                            <th className="text-right px-3 py-3 text-[10px] font-black text-emerald-600 uppercase tracking-widest">Prix Réel</th>
+                                            <th className="text-right px-3 py-3 text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total Réel</th>
+                                            <th className="text-right px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Écart</th>
+                                            {isAdminOrDG && <th className="px-2 py-3"></th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                                        {task.lignes_devis?.length === 0 && (
+                                            <tr><td colSpan={8} className="text-center py-8 text-slate-400 italic text-sm">Aucune ligne de commande. Le DG peut en ajouter ci-dessous.</td></tr>
+                                        )}
+                                        {task.lignes_devis?.map((ligne) => {
+                                            const ecart = ligne.ecart;
+                                            const isEditing = editingRealPrice[ligne.id] !== undefined;
+                                            return (
+                                                <tr key={ligne.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                                    <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">{ligne.article}</td>
+                                                    <td className="px-3 py-3 text-center text-slate-600 dark:text-slate-400">
+                                                        {parseFloat(ligne.quantite).toLocaleString()} {ligne.unite}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-right text-slate-600 dark:text-slate-400">
+                                                        {editingEstimePrice[ligne.id] !== undefined ? (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-24 px-2 py-1 text-xs border border-blue-300 rounded-lg text-right outline-none focus:ring-2 focus:ring-blue-200 bg-white dark:bg-slate-800"
+                                                                    value={editingEstimePrice[ligne.id]}
+                                                                    onChange={e => setEditingEstimePrice(prev => ({...prev, [ligne.id]: e.target.value}))}
+                                                                    onKeyDown={e => e.key === 'Enter' && handleSaveEstimePrice(ligne.id)}
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => handleSaveEstimePrice(ligne.id)} className="px-2 py-1 bg-blue-500 text-white rounded-md text-xs font-bold hover:bg-blue-600">✓</button>
+                                                                <button onClick={() => setEditingEstimePrice(prev => { const n = {...prev}; delete n[ligne.id]; return n; })} className="px-2 py-1 bg-slate-200 text-slate-600 rounded-md text-xs hover:bg-slate-300">✕</button>
+                                                            </div>
+                                                        ) : (
+                                                            isAdminOrDG ? (
+                                                                <button
+                                                                    onClick={() => setEditingEstimePrice(prev => ({...prev, [ligne.id]: ligne.prix_estime || ''}))}
+                                                                    className="text-right w-full font-semibold transition-colors hover:text-blue-600"
+                                                                    title="Modifier le prix estimé"
+                                                                >
+                                                                    {parseFloat(ligne.prix_estime).toLocaleString()} Ar
+                                                                </button>
+                                                            ) : (
+                                                                <span>{parseFloat(ligne.prix_estime).toLocaleString()} Ar</span>
+                                                            )
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-right font-bold text-slate-700 dark:text-slate-300">
+                                                        {parseFloat(ligne.total_estime).toLocaleString()} Ar
+                                                    </td>
+                                                    <td className="px-3 py-3 text-right">
+                                                        {isEditing ? (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    className="w-24 px-2 py-1 text-xs border border-emerald-300 rounded-lg text-right outline-none focus:ring-2 focus:ring-emerald-200 bg-white dark:bg-slate-800"
+                                                                    value={editingRealPrice[ligne.id]}
+                                                                    onChange={e => setEditingRealPrice(prev => ({...prev, [ligne.id]: e.target.value}))}
+                                                                    onKeyDown={e => e.key === 'Enter' && handleSaveRealPrice(ligne.id)}
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => handleSaveRealPrice(ligne.id)} className="px-2 py-1 bg-emerald-500 text-white rounded-md text-xs font-bold hover:bg-emerald-600">✓</button>
+                                                                <button onClick={() => setEditingRealPrice(prev => { const n = {...prev}; delete n[ligne.id]; return n; })} className="px-2 py-1 bg-slate-200 text-slate-600 rounded-md text-xs hover:bg-slate-300">✕</button>
+                                                            </div>
+                                                        ) : (
+                                                            isChef ? (
+                                                                <button
+                                                                    onClick={() => setEditingRealPrice(prev => ({...prev, [ligne.id]: ligne.prix_reel || ''}))}
+                                                                    className={`text-right w-full font-semibold transition-colors hover:text-emerald-600 ${ligne.prix_reel ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400 italic'}`}
+                                                                >
+                                                                    {ligne.prix_reel ? `${parseFloat(ligne.prix_reel).toLocaleString()} Ar` : '— cliquer pour saisir'}
+                                                                </button>
+                                                            ) : (
+                                                                <span className={`text-right ${ligne.prix_reel ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-slate-400 italic'}`}>
+                                                                    {ligne.prix_reel ? `${parseFloat(ligne.prix_reel).toLocaleString()} Ar` : '— non saisi'}
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-right font-bold">
+                                                        {ligne.total_reel != null
+                                                            ? <span className="text-emerald-700 dark:text-emerald-400">{parseFloat(ligne.total_reel).toLocaleString()} Ar</span>
+                                                            : <span className="text-slate-300">—</span>}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-right font-black text-sm">
+                                                        {ecart != null ? (
+                                                            <span className={`px-2 py-0.5 rounded-full text-xs ${parseFloat(ecart) > 0 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                                {parseFloat(ecart) > 0 ? '+' : ''}{parseFloat(ecart).toLocaleString()}
+                                                            </span>
+                                                        ) : <span className="text-slate-300">—</span>}
+                                                    </td>
+                                                    {isAdminOrDG && (
+                                                        <td className="px-2 py-3">
+                                                            <button onClick={() => handleDeleteLigne(ligne.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Formulaire ajout ligne — DG uniquement */}
+                            {isAdminOrDG && (
+                                <div className="p-4 bg-emerald-50/30 dark:bg-emerald-900/10 border-t border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3">Ajouter une ligne</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                        <input
+                                            placeholder="Article (ex: Gasoil)"
+                                            value={newLigne.article}
+                                            onChange={e => setNewLigne({...newLigne, article: e.target.value})}
+                                            className="col-span-2 px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700"
+                                        />
+                                        <input
+                                            placeholder="Qté"
+                                            type="number"
+                                            value={newLigne.quantite}
+                                            onChange={e => setNewLigne({...newLigne, quantite: e.target.value})}
+                                            className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700"
+                                        />
+                                        <input
+                                            placeholder="Unité (L, kg, pcs...)"
+                                            value={newLigne.unite}
+                                            onChange={e => setNewLigne({...newLigne, unite: e.target.value})}
+                                            className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700"
+                                        />
+                                        <input
+                                            placeholder="Prix estimé (Ar)"
+                                            type="number"
+                                            value={newLigne.prix_estime}
+                                            onChange={e => setNewLigne({...newLigne, prix_estime: e.target.value})}
+                                            className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700"
+                                        />
+                                     </div>
+
+                                    {/* Aperçu du sous-total en temps réel */}
+                                    {newLigne.quantite && newLigne.prix_estime && (
+                                        <div className="mt-3 flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl w-fit">
+                                            <span className="text-xs text-slate-400 font-medium">
+                                                {parseFloat(newLigne.quantite).toLocaleString()} {newLigne.unite} × {parseFloat(newLigne.prix_estime).toLocaleString()} Ar
+                                            </span>
+                                            <span className="text-slate-300">＝</span>
+                                            <span className="text-base font-black text-emerald-600">
+                                                {(parseFloat(newLigne.quantite || 0) * parseFloat(newLigne.prix_estime || 0)).toLocaleString()} Ar
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        size="sm"
+                                        icon={PlusCircle}
+                                        onClick={handleAddLigne}
+                                        className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                                    >
+                                        Ajouter l'article
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -458,8 +830,7 @@ export default function TaskDetail() {
                                                             {msg.author_role_display && (
                                                                 <Badge
                                                                     size="sm"
-                                                                    className={`text-[9px] font-black tracking-widest uppercase border-none px-2 py-0.5 ${isStaff ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : 'bg-slate-100 text-slate-500'
-                                                                        }`}
+                                                                    className={`text-[9px] font-black tracking-widest uppercase border-none px-2 py-0.5 ${isStaff ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : 'bg-slate-100 text-slate-500'}`}
                                                                 >
                                                                     {msg.author_role_display}
                                                                 </Badge>
@@ -483,8 +854,7 @@ export default function TaskDetail() {
                                                             : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-100'}
                                                     `}>
                                                         {/* Arrow for the bubble */}
-                                                        <div className={`absolute left-[-6px] top-4 w-3 h-3 rotate-45 border-l border-b ${isStaff ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'
-                                                            }`}></div>
+                                                        <div className={`absolute left-[-6px] top-4 w-3 h-3 rotate-45 border-l border-b ${isStaff ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}></div>
 
                                                         <p className="text-[14px] leading-relaxed font-medium whitespace-pre-wrap relative z-10">
                                                             {msg.text}
@@ -535,11 +905,34 @@ export default function TaskDetail() {
                                     </p>
                                 </div>
                             )}
+
+                            {/* Nouveau message */}
+                            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+                                <div className="flex gap-4">
+                                    <Avatar name={user?.full_name} size="base" />
+                                    <div className="flex-1 space-y-3">
+                                        <textarea
+                                            placeholder="Écrivez un message ou posez une question..."
+                                            value={newCommentOnly}
+                                            onChange={e => setNewCommentOnly(e.target.value)}
+                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-100/20 outline-none transition-all text-sm min-h-[100px] text-slate-800 dark:text-slate-200"
+                                        />
+                                        <div className="flex justify-end">
+                                            <Button 
+                                                icon={Send} 
+                                                onClick={handlePostComment}
+                                                disabled={!newCommentOnly.trim()}
+                                            >
+                                                Envoyer le message
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Sidebar Column */}
+ {/* Sidebar Column */}
                 <div className="space-y-6">
                     {/* Status Overview Card */}
                     <Card className="border-none shadow-lg shadow-slate-200/50 dark:shadow-none text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -580,15 +973,97 @@ export default function TaskDetail() {
                                         <Calendar size={16} className="text-slate-300 dark:text-slate-600" />
                                     </div>
                                 </div>
-                                <div className="p-5 space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Budget Alloué</p>
-                                    <div className="flex items-center justify-between text-[var(--color-text-primary)]">
-                                        <p className="text-lg font-black">{task.budget_alloue ? task.budget_alloue.toLocaleString() + ' Ar' : '-'}</p>
-                                        <Wallet size={16} className="text-slate-300 dark:text-slate-600" />
+                                <div className="p-5 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Budget Alloué</p>
+                                        {isAdminOrDG && (
+                                            <div className="flex gap-1">
+                                                {task.lignes_devis?.length > 0 && (
+                                                    <button
+                                                        onClick={handleSyncBudgetFromDevis}
+                                                        title="Synchroniser depuis le Bon de Commande"
+                                                        className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 px-2 py-0.5 rounded-lg transition-all uppercase"
+                                                    >
+                                                        ⟳ Sync Devis
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => { setEditingBudget(true); setBudgetInput(task.budget_alloue || ''); }}
+                                                    className="text-[9px] text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg transition-all font-black uppercase"
+                                                >
+                                                    ✏️ Modifier
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {editingBudget ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                value={budgetInput}
+                                                onChange={e => setBudgetInput(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter') handleSaveBudget(budgetInput); if (e.key === 'Escape') setEditingBudget(false); }}
+                                                autoFocus
+                                                className="flex-1 px-3 py-2 text-sm font-bold border border-blue-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-200 bg-white dark:bg-slate-800"
+                                                placeholder="Montant en Ar"
+                                            />
+                                            <button onClick={() => handleSaveBudget(budgetInput)} className="px-2 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">✓</button>
+                                            <button onClick={() => setEditingBudget(false)} className="px-2 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs hover:bg-slate-300">✕</button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-between text-[var(--color-text-primary)]">
+                                            <p className={`text-lg font-black ${!task.budget_alloue && isAdminOrDG ? 'text-slate-300 italic text-sm cursor-pointer hover:text-blue-500' : ''}`}
+                                               onClick={!task.budget_alloue && isAdminOrDG ? () => { setEditingBudget(true); setBudgetInput(''); } : undefined}>
+                                                {task.budget_alloue ? parseFloat(task.budget_alloue).toLocaleString() + ' Ar' : (isAdminOrDG ? '— cliquer pour définir' : '—')}
+                                            </p>
+                                            <Wallet size={16} className="text-slate-300 dark:text-slate-600" />
+                                        </div>
+                                    )}
+
+                                    {/* Barre de progression budget vs devis */}
+                                    {task.budget_alloue && task.lignes_devis?.length > 0 && (() => {
+                                        const totalDevis = task.lignes_devis.reduce((s, l) => s + parseFloat(l.total_estime || 0), 0);
+                                        const pct = Math.min((totalDevis / parseFloat(task.budget_alloue)) * 100, 100);
+                                        const over = totalDevis > parseFloat(task.budget_alloue);
+                                        return (
+                                            <div className="space-y-1 pt-1">
+                                                <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase">
+                                                    <span>Devis estimé</span>
+                                                    <span className={over ? 'text-red-500' : 'text-emerald-600'}>{totalDevis.toLocaleString()} Ar</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-500 ${over ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
+                                                {over && <p className="text-[9px] text-red-500 font-bold">⚠ Dépassement de {(totalDevis - parseFloat(task.budget_alloue)).toLocaleString()} Ar</p>}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                                <div className="p-5 space-y-3 bg-blue-50/30 dark:bg-blue-900/10">
+                                    <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.05em]">Chef de mission</p>
+                                    <div className="flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-800 shadow-sm">
+                                        <Avatar name={task.agent_principal_name || 'Non assigné'} size="base" />
+                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                            {task.agent_principal_name || 'Non assigné'}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Équipe Assignée</p>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.05em]">Équipe Assignée</p>
+                                        {isChef && (
+                                            <Button size="sm" variant="ghost" className="text-[10px] h-6 py-0 px-2 text-blue-600 hover:bg-blue-50" onClick={() => {
+                                                fetchUsers();
+                                                setSearchTerm('');
+                                                setSelectedTeam(task.agents_assignes || []);
+                                                setShowTeamModal(true);
+                                            }}>Modifier l'équipe</Button>
+                                        )}
+                                    </div>
                                     <div className="space-y-2">
                                         {task.agents_assignes_names?.length > 0 ? (
                                             task.agents_assignes_names.map((name, idx) => (
@@ -631,7 +1106,7 @@ export default function TaskDetail() {
                     )}
 
                     {/* Quick Financial Action */}
-                    {task.statut === 'en_cours' && !isAdminOrDG && (
+                    {task.statut === 'en_cours' && isChef && (
                         <Card className="bg-indigo-600 border-none shadow-xl shadow-indigo-500/20 text-white">
                             <CardContent className="p-6 space-y-4 text-center">
                                 <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mx-auto">
@@ -737,6 +1212,71 @@ export default function TaskDetail() {
                         <div className="p-6 border-t border-slate-50 flex justify-end gap-3">
                             <Button variant="outline" onClick={() => setShowReportModal(false)}>Annuler</Button>
                             <Button icon={Send} onClick={handleRequestReport} disabled={!reportDate || !reportMotif}>Envoyer</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Modal de gestion d'équipe */}
+            {showTeamModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <Card className="w-full max-w-md shadow-2xl border-none animate-in zoom-in-95 duration-300 dark:bg-slate-900">
+                        <CardHeader>
+                            <CardTitle className="text-xl">Gérer l'équipe</CardTitle>
+                            <CardDescription>Sélectionnez les agents qui participeront à cette mission.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
+                            {/* Barre de recherche */}
+                            <div className="relative group sticky top-0 bg-white dark:bg-slate-900 z-10 pb-2">
+                                <Search size={16} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <Input
+                                    placeholder="Rechercher un agent ou rôle..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 h-10 text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                {availableUsers
+                                    .filter(u => {
+                                        const search = searchTerm.toLowerCase();
+                                        return (u.full_name || '').toLowerCase().includes(search) || 
+                                               (u.role_display || '').toLowerCase().includes(search) ||
+                                               (u.username || '').toLowerCase().includes(search);
+                                    })
+                                    .map(u => (
+                                        <label key={u.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTeam.includes(u.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedTeam([...selectedTeam, u.id]);
+                                                    else setSelectedTeam(selectedTeam.filter(id => id !== u.id));
+                                                }}
+                                                className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold dark:text-slate-200">{u.full_name || u.username}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase">{u.role_display || u.role}</p>
+                                            </div>
+                                        </label>
+                                    ))}
+                                {availableUsers.filter(u => {
+                                    const search = searchTerm.toLowerCase();
+                                    return (u.full_name || '').toLowerCase().includes(search) || 
+                                           (u.role_display || '').toLowerCase().includes(search) ||
+                                           (u.username || '').toLowerCase().includes(search);
+                                }).length === 0 && (
+                                    <div className="text-center py-8">
+                                        <p className="text-xs text-slate-500 italic">Aucun agent trouvé pour "{searchTerm}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                        <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setShowTeamModal(false)}>Annuler</Button>
+                            <Button icon={CheckCircle} onClick={handleUpdateTeam}>Enregistrer</Button>
                         </div>
                     </Card>
                 </div>

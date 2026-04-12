@@ -43,7 +43,7 @@ export default function IncomeDetail() {
                 'cancel': 'annuler'
             };
             const urlAction = actionMapping[action] || action;
-            await api.post(`finances/entrees/${id}/${urlAction}/`, { comment });
+            await api.post(`finances/entrees/${id}/${urlAction}/`, { commentaire: comment });
             await fetchIncome();
             setComment('');
         } catch (err) {
@@ -57,7 +57,7 @@ export default function IncomeDetail() {
     if (loading) return <div className={styles.financeContainer}><p>Chargement...</p></div>;
     if (!income) return <div className={styles.financeContainer}><p>Entrée non trouvée.</p></div>;
 
-    const canManager = ['admin', 'dg', 'comptable'].includes(user.role);
+    const canManager = ['admin', 'dg', 'comptable', 'caisse'].includes(user.role);
 
     return (
         <div className={styles.financeContainer}>
@@ -122,7 +122,7 @@ export default function IncomeDetail() {
                     <div className={styles.tableWrapper} style={{ padding: '20px' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: '16px' }}>Actions & Workflow</h3>
 
-                        {income.statut === 'en_attente' && canManager && (
+                        {income.statut === 'en_attente' && income.can_confirm && (
                             <div style={{ display: 'grid', gap: '12px' }}>
                                 <textarea
                                     placeholder="Ajouter une note ou motif d'annulation..."

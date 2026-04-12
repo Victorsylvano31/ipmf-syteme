@@ -61,7 +61,7 @@ export default function DashboardCaisse() {
                         <RefreshCw size={16} className={`${refreshing ? 'animate-spin' : ''} mr-2`} />
                         {refreshing ? 'Actualisation...' : 'Actualiser'}
                     </Button>
-                    <Link to="/finances" className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xl shadow-emerald-500/20 font-black rounded-full h-10 text-[10px] uppercase tracking-widest flex items-center transition-all group">
+                    <Link to="/finances/incomes" className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-xl shadow-emerald-500/20 font-black rounded-full h-10 text-[10px] uppercase tracking-widest flex items-center transition-all group">
                         Consulter Trésorerie <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                     </Link>
                 </div>

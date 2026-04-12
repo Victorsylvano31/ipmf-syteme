@@ -119,6 +119,19 @@ export default function UsersList() {
         }
     };
 
+    const handleDeleteUser = async (userToDel) => {
+        if (!window.confirm(`⚠️ ATTENTION : Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur ${userToDel.full_name || userToDel.username} ? Cette action est irréversible.`)) {
+            return;
+        }
+        
+        try {
+            await api.delete(`users/${userToDel.id}/`);
+            fetchData();
+        } catch (err) {
+            alert(err.response?.data?.error || "Erreur lors de la suppression de l'utilisateur.");
+        }
+    };
+
     const openEditModal = (user) => {
         setSelectedUser(user);
         setFormData({
@@ -341,6 +354,15 @@ export default function UsersList() {
                                                         ? <ToggleRight size={24} className="text-emerald-500" />
                                                         : <ToggleLeft size={24} className="text-slate-300" />
                                                     }
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-10 h-10 p-0 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-300 hover:text-red-500 transition-colors"
+                                                    onClick={() => handleDeleteUser(u)}
+                                                    title="Supprimer définitivement"
+                                                >
+                                                    <Trash2 size={18} />
                                                 </Button>
                                             </div>
                                         </td>

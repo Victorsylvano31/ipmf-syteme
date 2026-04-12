@@ -7,15 +7,16 @@ from django.utils import timezone
 from datetime import timedelta
 import csv
 from django.http import HttpResponse
-from .models import Tache, CommentaireTache, DemandeReport, SousTache
+from .models import Tache, CommentaireTache, DemandeReport, SousTache, LigneDevis
 from audit.models import AuditLog
 from notifications.services import NotificationService
 from .serializers import (
     TacheSerializer, CommentaireTacheSerializer, TacheActionSerializer,
-    DemandeReportSerializer, SousTacheSerializer
+    DemandeReportSerializer, SousTacheSerializer, LigneDevisSerializer
 )
 from rest_framework.exceptions import PermissionDenied
 from .permissions import CanAssignTasks, CanValidateTasks, IsTaskOwnerOrAssignee, CanViewAllTasks
+
 
 class TacheViewSet(viewsets.ModelViewSet):
     queryset = Tache.objects.all()
@@ -31,24 +32,57 @@ class TacheViewSet(viewsets.ModelViewSet):
             permission_classes = [permissions.IsAuthenticated, CanAssignTasks]
         elif self.action in ['valider', 'annuler']:
             permission_classes = [permissions.IsAuthenticated, CanValidateTasks]
-        elif self.action in ['update', 'partial_update', 'destroy']:
+        elif self.action in ['update', 'partial_update']:
             permission_classes = [permissions.IsAuthenticated, IsTaskOwnerOrAssignee | CanAssignTasks]
+        elif self.action in ['destroy']:
+            # Seul le créateur ou admin/DG peut supprimer
+            permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser | CanAssignTasks]
         else:
             permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
     
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Règle DG : Modification autorisée uniquement avant le début
+        if request.user.role in ['admin', 'dg'] or request.user.is_superuser:
+            # On bloque si la date est passée OU si le statut n'est plus "creee"
+            if (instance.date_debut and instance.date_debut <= timezone.now()) or instance.statut != 'creee':
+                # On autorise quand même certaines modifications mineures si nécessaire, 
+                # mais on bloque les changements structurels via le formulaire principal
+                if request.data.get('titre') or request.data.get('date_debut') or request.data.get('agent_principal'):
+                     return Response(
+                         {'error': "Impossible de modifier les paramètres de base d'une mission qui est déjà en cours ou terminée."},
+                         status=status.HTTP_400_BAD_REQUEST
+                     )
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Règle : Suppression autorisée uniquement si non commencée
+        if (instance.date_debut and instance.date_debut <= timezone.now()) or instance.statut != 'creee':
+            return Response(
+                {'error': "Vous ne pouvez pas supprimer une mission qui a déjà commencé ou qui n'est plus à l'état 'Créée'. Utilisez l'annulation."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        self.log_action(request.user, f"Tache {instance.numero} supprimee", instance, action_type='delete')
+        return super().destroy(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if user.role in ['admin', 'dg']:
-            return Tache.objects.all()
+            return Tache.objects.select_related('createur').prefetch_related('agents_assignes').all()
         else:
             # Les utilisateurs voient les tâches qu'ils ont créées ou qui leur sont assignées
-            return Tache.objects.filter(
+            return Tache.objects.select_related('createur').prefetch_related('agents_assignes').filter(
                 Q(createur=user) | Q(agents_assignes=user)
             ).distinct()
     
     def perform_create(self, serializer):
         tache = serializer.save(createur=self.request.user)
+        # Auto-ajouter le Chef de mission dans l'équipe
+        if tache.agent_principal:
+            tache.agents_assignes.add(tache.agent_principal)
         self.log_action(self.request.user, f"Tache {tache.numero} creee", tache, action_type='create')
         # Notifier les agents assignés
         NotificationService.notify_task_assigned(tache)
@@ -72,14 +106,13 @@ class TacheViewSet(viewsets.ModelViewSet):
         tache.date_debut_reelle = timezone.now()
         tache.save()
         
-        # Créer un commentaire si fourni
-        if serializer.validated_data.get('commentaire') or serializer.validated_data.get('attachment'):
-            CommentaireTache.objects.create(
-                tache=tache,
-                auteur=request.user,
-                message=f"Début de la tâche: {serializer.validated_data.get('commentaire', '')}",
-                piece_jointe=serializer.validated_data.get('attachment')
-            )
+        # Créer un commentaire
+        CommentaireTache.objects.create(
+            tache=tache,
+            auteur=request.user,
+            message=f"🚀 Mission démarrée. {serializer.validated_data.get('commentaire', '')}",
+            piece_jointe=serializer.validated_data.get('attachment')
+        )
         
         self.log_action(request.user, f"Tache {tache.numero} demarree", tache)
         
@@ -105,14 +138,13 @@ class TacheViewSet(viewsets.ModelViewSet):
         tache.resultat = serializer.validated_data.get('resultat', '')
         tache.save()
         
-        # Créer un commentaire si fourni
-        if serializer.validated_data.get('commentaire') or serializer.validated_data.get('attachment'):
-            CommentaireTache.objects.create(
-                tache=tache,
-                auteur=request.user,
-                message=f"Tâche terminée: {serializer.validated_data.get('commentaire', '')}",
-                piece_jointe=serializer.validated_data.get('attachment')
-            )
+        # Créer un commentaire
+        CommentaireTache.objects.create(
+            tache=tache,
+            auteur=request.user,
+            message=f"🏁 Mission terminée. {serializer.validated_data.get('commentaire', '')}",
+            piece_jointe=serializer.validated_data.get('attachment')
+        )
         
         self.log_action(request.user, f"Tache {tache.numero} terminee", tache)
         
@@ -269,6 +301,29 @@ class TacheViewSet(viewsets.ModelViewSet):
             'par_priorite': list(par_priorite),
             'par_utilisateur': list(par_utilisateur),
         })
+        
+    @action(detail=True, methods=['post'])
+    def gerer_equipe(self, request, pk=None):
+        """Gérer l'équipe assignée à la mission (Chef de mission uniquement)"""
+        tache = self.get_object()
+        user = request.user
+        
+        if tache.agent_principal != user:
+            return Response(
+                {'error': "Seul le Chef de mission peut gérer l'équipe."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        agents_ids = request.data.get('agents', [])
+        # Mettre à jour les agents
+        tache.agents_assignes.set(agents_ids)
+        
+        # Le chef de mission doit toujours être dans l'équipe
+        if tache.agent_principal and tache.agent_principal.id not in agents_ids:
+            tache.agents_assignes.add(tache.agent_principal)
+            
+        self.log_action(user, f"Équipe de la tâche {tache.numero} mise à jour", tache)
+        return Response({'status': 'success', 'agents_count': tache.agents_assignes.count()})
     
     def log_action(self, user, message, tache=None, action_type='update'):
         """Log une action via le module audit"""
@@ -448,9 +503,10 @@ class SousTacheViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Seuls les admins et DG peuvent créer des sous-tâches
-        if user.role not in ['admin', 'dg']:
-            raise PermissionDenied("Seuls les administrateurs et le Directeur Général peuvent ajouter des sous-tâches.")
+        tache = serializer.validated_data.get('tache')
+        # Permissions: admin, dg, ou l'agent principal (chef de mission)
+        if user.role not in ['admin', 'dg'] and tache.agent_principal != user:
+            raise PermissionDenied("Seuls les administrateurs, le DG ou le Chef de mission peuvent ajouter des sous-tâches.")
         serializer.save()
 
     @action(detail=True, methods=['post'])
@@ -458,12 +514,13 @@ class SousTacheViewSet(viewsets.ModelViewSet):
         """Marquer une sous-tâche comme terminée ou non."""
         sous_tache = self.get_object()
         user = request.user
-        # Seul l'admin, le DG, ou l'agent auquel la sous-tâche est assignée peut la basculer
-        if user.role not in ['admin', 'dg']:
-            if sous_tache.assigne_a != user:
-                raise PermissionDenied("Vous ne pouvez pas modifier cette sous-tâche.")
-            if sous_tache.tache.statut in ['terminee', 'validee', 'annulee']:
-                raise PermissionDenied("Vous ne pouvez pas modifier une sous-tâche d'une mission terminée.")
+        # Seul l'admin, le DG, ou le chef de mission peut basculer la sous-tâche
+        if user.role not in ['admin', 'dg'] and sous_tache.tache.agent_principal != user:
+            raise PermissionDenied("Seul le Chef de mission ou la Direction peut valider cette sous-tâche.")
+            
+        if sous_tache.tache.statut in ['terminee', 'validee', 'annulee']:
+            raise PermissionDenied("Vous ne pouvez pas modifier une sous-tâche d'une mission terminée.")
+            
         sous_tache.est_terminee = not sous_tache.est_terminee
         if sous_tache.est_terminee:
             sous_tache.date_fin = timezone.now()
@@ -471,3 +528,60 @@ class SousTacheViewSet(viewsets.ModelViewSet):
             sous_tache.date_fin = None
         sous_tache.save()
         return Response(SousTacheSerializer(sous_tache).data)
+
+
+class LigneDevisViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les lignes du bon de commande d'une mission."""
+    queryset = LigneDevis.objects.all()
+    serializer_class = LigneDevisSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        tache_id = self.request.query_params.get('tache', None)
+        qs = LigneDevis.objects.all()
+        if tache_id:
+            qs = qs.filter(tache_id=tache_id)
+        if user.role in ['admin', 'dg']:
+            return qs
+        # Agents voient les lignes des missions qui leur sont assignées
+        return qs.filter(
+            Q(tache__agents_assignes=user) | Q(tache__createur=user)
+        ).distinct()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role not in ['admin', 'dg']:
+            raise PermissionDenied("Seuls le DG et l'admin peuvent créer des lignes de devis.")
+        serializer.save(cree_par=user)
+
+    def update(self, request, *args, **kwargs):
+        """Agents (Chef uniquement) peuvent mettre à jour prix_reel. DG/Admin ne peuvent pas modifier prix_reel."""
+        instance = self.get_object()
+        user = request.user
+        partial = kwargs.pop('partial', False)
+        
+        incoming = set(request.data.keys())
+
+        if user.role not in ['admin', 'dg']:
+            # L'agent peut seulement remplir le prix réel, mais uniquement s'il est CHEF
+            if instance.tache.agent_principal != user:
+                raise PermissionDenied("Seul le Chef de mission peut modifier le bon de commande.")
+            allowed_fields = {'prix_reel'}
+            if not incoming.issubset(allowed_fields):
+                raise PermissionDenied("Vous pouvez uniquement renseigner le prix réel du marché.")
+        else:
+            # DG/Admin ne peuvent pas modifier le prix réel fait par l'agent
+            if 'prix_reel' in incoming:
+                raise PermissionDenied("Vous ne pouvez pas modifier le prix réel saisi par l'agent.")
+            
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        if user.role not in ['admin', 'dg']:
+            raise PermissionDenied("Seuls le DG et l'admin peuvent supprimer des lignes de devis.")
+        return super().destroy(request, *args, **kwargs)

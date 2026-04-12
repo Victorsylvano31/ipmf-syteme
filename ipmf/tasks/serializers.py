@@ -1,8 +1,23 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Tache, CommentaireTache, DemandeReport, SousTache
+from .models import Tache, CommentaireTache, DemandeReport, SousTache, LigneDevis
 
 User = get_user_model()
+
+class LigneDevisSerializer(serializers.ModelSerializer):
+    total_estime = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+    total_reel = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, allow_null=True)
+    ecart = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, allow_null=True)
+    cree_par_name = serializers.CharField(source='cree_par.get_full_name', read_only=True)
+
+    class Meta:
+        model = LigneDevis
+        fields = [
+            'id', 'tache', 'article', 'quantite', 'unite',
+            'prix_estime', 'prix_reel', 'total_estime', 'total_reel', 'ecart',
+            'cree_par', 'cree_par_name', 'date_creation'
+        ]
+        read_only_fields = ('cree_par', 'date_creation', 'total_estime', 'total_reel', 'ecart')
 
 class SousTacheSerializer(serializers.ModelSerializer):
     assigne_a_name = serializers.CharField(source='assigne_a.get_full_name', read_only=True)
@@ -44,6 +59,7 @@ class TacheSerializer(serializers.ModelSerializer):
     pending_report = serializers.SerializerMethodField() # Demande de report en attente
     budget_restant = serializers.SerializerMethodField() # Budget restant calculé
     sous_taches = SousTacheSerializer(many=True, read_only=True) # Liste des sous-tâches
+    lignes_devis = LigneDevisSerializer(many=True, read_only=True) # Bon de commande
     
     class Meta:
         model = Tache
@@ -55,7 +71,7 @@ class TacheSerializer(serializers.ModelSerializer):
             'date_debut_reelle', 'date_fin_reelle', 'commentaire_validation', 'valide_par', 'valide_par_name',
             'date_validation', 'jours_restants', 'est_en_retard', 'pourcentage_avancement',
             'peut_demarrer', 'peut_terminer', 'peut_valider', 'peut_annuler',
-            'messages', 'pending_report', 'budget_restant', 'sous_taches'
+            'messages', 'pending_report', 'budget_restant', 'sous_taches', 'lignes_devis'
         ]
         read_only_fields = (
             'numero', 'createur', 'date_creation', 'jours_restants', 'est_en_retard', 
@@ -159,7 +175,7 @@ class CommentaireTacheSerializer(serializers.ModelSerializer):
         model = CommentaireTache
         fields = [
             'id', 'tache', 'auteur', 'author', 'author_role', 
-            'author_role_display', 'author_photo', 'text', 'attachment', 'date_creation'
+            'author_role_display', 'author_photo', 'text', 'message', 'attachment', 'date_creation'
         ]
         read_only_fields = ('auteur', 'date_creation')
 
