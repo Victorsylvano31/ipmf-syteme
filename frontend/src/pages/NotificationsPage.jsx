@@ -20,7 +20,7 @@ import Button from '../components/ui/Button';
 import styles from '../components/Notifications/NotificationBell.module.css';
 
 const NotificationsPage = () => {
-    const { notifications, markAsRead, markAllAsRead, refresh } = useNotifications();
+    const { notifications, markAsRead, markAllAsRead } = useNotifications();
     const [filter, setFilter] = useState('all');
     const navigate = useNavigate();
 
