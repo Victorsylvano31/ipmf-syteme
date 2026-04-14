@@ -161,6 +161,7 @@ if CLOUDINARY_URL and not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_STORAGE = {
         'CLOUDINARY_URL': CLOUDINARY_URL,
+        'SECURE': True,
     }
     MEDIA_URL = '/media/'
 else:

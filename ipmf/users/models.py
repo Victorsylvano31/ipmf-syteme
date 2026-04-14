@@ -92,12 +92,15 @@ class UserProfile(models.Model):
 @receiver(post_delete, sender=UserProfile)
 def auto_delete_file_on_delete(sender, instance, **kwargs):
     """Supprime le fichier du stockage lors de la suppression de l'objet."""
-    if instance.photo:
-        if os.path.isfile(instance.photo.path):
+    # En production (Cloudinary), .path lève une erreur NotImplementedError
+    try:
+        if instance.photo and os.path.isfile(instance.photo.path):
             os.remove(instance.photo.path)
-    if instance.signature:
-        if os.path.isfile(instance.signature.path):
+        if instance.signature and os.path.isfile(instance.signature.path):
             os.remove(instance.signature.path)
+    except (NotImplementedError, ValueError):
+        # On ignore si le stockage ne supporte pas le chemin local (Cloudinary)
+        pass
 
 @receiver(pre_save, sender=UserProfile)
 def auto_delete_file_on_change(sender, instance, **kwargs):
@@ -114,12 +117,18 @@ def auto_delete_file_on_change(sender, instance, **kwargs):
     new_photo = instance.photo
     old_photo = old_profile.photo
     if old_photo and new_photo != old_photo:
-        if os.path.isfile(old_photo.path):
-            os.remove(old_photo.path)
+        try:
+            if os.path.isfile(old_photo.path):
+                os.remove(old_photo.path)
+        except (NotImplementedError, ValueError):
+            pass
             
     # Nettoyage signature
     new_sig = instance.signature
     old_sig = old_profile.signature
     if old_sig and new_sig != old_sig:
-        if os.path.isfile(old_sig.path):
-            os.remove(old_sig.path)
+        try:
+            if os.path.isfile(old_sig.path):
+                os.remove(old_sig.path)
+        except (NotImplementedError, ValueError):
+            pass
